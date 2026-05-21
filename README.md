@@ -1,0 +1,1 @@
+# Remove watermarks from images
