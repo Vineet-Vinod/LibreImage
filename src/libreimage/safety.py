@@ -134,7 +134,9 @@ def _verification_script(model_id: str, revision: str | None) -> str:
         if not safetensor_files:
             raise SystemExit("Model does not publish safetensors weights.")
 
-        with tempfile.TemporaryDirectory(prefix="libreimage-model-check-") as cache_dir:
+        temp_root = os.path.expanduser("~/.cache/libreimage-safety")
+        os.makedirs(temp_root, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="model-check-", dir=temp_root) as cache_dir:
             local_dir = snapshot_download(
                 repo_id=model_id,
                 revision=revision,
@@ -182,8 +184,8 @@ def _lima_python_command() -> str:
         trap cleanup EXIT
 
         python3 -m venv "$tmp_dir/venv"
-        "$tmp_dir/venv/bin/python" -m pip install --quiet --upgrade pip
-        "$tmp_dir/venv/bin/python" -m pip install --quiet huggingface-hub safetensors numpy
+        "$tmp_dir/venv/bin/python" -m pip install --quiet --no-cache-dir --upgrade pip
+        "$tmp_dir/venv/bin/python" -m pip install --quiet --no-cache-dir huggingface-hub safetensors numpy
         "$tmp_dir/venv/bin/python" -
         """
     ).strip()
