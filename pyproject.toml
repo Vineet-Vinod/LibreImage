@@ -1,7 +1,27 @@
 [project]
 name = "libreimage"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local SDXL inpainting for user-supplied masks"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "accelerate>=0.31",
+    "diffusers>=0.30",
+    "huggingface-hub>=0.23",
+    "numpy>=1.26",
+    "pillow>=10.3",
+    "safetensors>=0.4",
+    "torch>=2.3",
+    "transformers>=4.41",
+]
+
+[project.scripts]
+libre = "libreimage.cli:main"
+libre-gui = "libreimage.gui:main"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
