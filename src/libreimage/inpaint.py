@@ -92,7 +92,7 @@ class LocalInpainter:
         from diffusers import AutoPipelineForInpainting
 
         self._device = _resolve_device(self.options.device, torch)
-        dtype = torch.float16 if self._device in {"mps", "cuda"} else torch.float32
+        dtype = torch.float16 if self._device == "cuda" else torch.float32
         load_kwargs = {
             "revision": self.options.revision,
             "torch_dtype": dtype,
