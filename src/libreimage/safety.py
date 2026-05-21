@@ -52,7 +52,7 @@ def ensure_model_checked(options: SafetyOptions) -> Path:
             text=True,
             capture_output=True,
             check=False,
-            timeout=30 * 60,
+            timeout=2 * 60 * 60,
         )
     except FileNotFoundError as exc:
         raise ModelSafetyError(
@@ -114,8 +114,6 @@ def _verification_script(model_id: str, revision: str | None) -> str:
         f"""
         import json
         import os
-        import tempfile
-
         from huggingface_hub import HfApi, snapshot_download
         from safetensors import safe_open
 
@@ -134,37 +132,36 @@ def _verification_script(model_id: str, revision: str | None) -> str:
         if not safetensor_files:
             raise SystemExit("Model does not publish safetensors weights.")
 
-        temp_root = os.path.expanduser("~/.cache/libreimage-safety")
-        os.makedirs(temp_root, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix="model-check-", dir=temp_root) as cache_dir:
-            local_dir = snapshot_download(
-                repo_id=model_id,
-                revision=revision,
-                cache_dir=cache_dir,
-                allow_patterns=[
-                    "*.json",
-                    "*.txt",
-                    "*.md",
-                    "*.model",
-                    "*.safetensors",
-                    "*.yaml",
-                    "*.yml",
-                ],
-                ignore_patterns=[
-                    "*.bin",
-                    "*.ckpt",
-                    "*.pt",
-                    "*.pth",
-                    "*.pkl",
-                    "*.pickle",
-                ],
-                local_files_only=False,
-            )
-            checked = []
-            for relative_path in safetensor_files:
-                path = os.path.join(local_dir, relative_path)
-                with safe_open(path, framework="numpy", device="cpu") as handle:
-                    checked.append({{"file": relative_path, "tensors": len(handle.keys())}})
+        cache_dir = os.path.expanduser("~/.cache/libreimage-safety/huggingface")
+        os.makedirs(cache_dir, exist_ok=True)
+        local_dir = snapshot_download(
+            repo_id=model_id,
+            revision=revision,
+            cache_dir=cache_dir,
+            allow_patterns=[
+                "*.json",
+                "*.txt",
+                "*.md",
+                "*.model",
+                "*.safetensors",
+                "*.yaml",
+                "*.yml",
+            ],
+            ignore_patterns=[
+                "*.bin",
+                "*.ckpt",
+                "*.pt",
+                "*.pth",
+                "*.pkl",
+                "*.pickle",
+            ],
+            local_files_only=False,
+        )
+        checked = []
+        for relative_path in safetensor_files:
+            path = os.path.join(local_dir, relative_path)
+            with safe_open(path, framework="numpy", device="cpu") as handle:
+                checked.append({{"file": relative_path, "tensors": len(handle.keys())}})
 
         print(json.dumps({{"safe_tensors": checked, "file_count": len(files)}}))
         """
