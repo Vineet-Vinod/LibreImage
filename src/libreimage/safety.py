@@ -43,7 +43,7 @@ def ensure_model_checked(options: SafetyOptions) -> Path:
         options.lima_instance,
         "bash",
         "-lc",
-        "uv run --with huggingface-hub --with safetensors python -",
+        _lima_python_command(),
     ]
     try:
         result = subprocess.run(
@@ -171,3 +171,19 @@ def _verification_script(model_id: str, revision: str | None) -> str:
 
 def quoted_lima_setup_hint(instance: str = DEFAULT_LIMA_INSTANCE) -> str:
     return " ".join(shlex.quote(part) for part in ["limactl", "start", instance])
+
+
+def _lima_python_command() -> str:
+    return textwrap.dedent(
+        """
+        set -euo pipefail
+        tmp_dir="$(mktemp -d -t libreimage-safety.XXXXXX)"
+        cleanup() { rm -rf "$tmp_dir"; }
+        trap cleanup EXIT
+
+        python3 -m venv "$tmp_dir/venv"
+        "$tmp_dir/venv/bin/python" -m pip install --quiet --upgrade pip
+        "$tmp_dir/venv/bin/python" -m pip install --quiet huggingface-hub safetensors torch
+        "$tmp_dir/venv/bin/python" -
+        """
+    ).strip()
