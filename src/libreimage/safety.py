@@ -161,7 +161,7 @@ def _verification_script(model_id: str, revision: str | None) -> str:
             checked = []
             for relative_path in safetensor_files:
                 path = os.path.join(local_dir, relative_path)
-                with safe_open(path, framework="pt", device="cpu") as handle:
+                with safe_open(path, framework="numpy", device="cpu") as handle:
                     checked.append({{"file": relative_path, "tensors": len(handle.keys())}})
 
         print(json.dumps({{"safe_tensors": checked, "file_count": len(files)}}))
@@ -183,7 +183,7 @@ def _lima_python_command() -> str:
 
         python3 -m venv "$tmp_dir/venv"
         "$tmp_dir/venv/bin/python" -m pip install --quiet --upgrade pip
-        "$tmp_dir/venv/bin/python" -m pip install --quiet huggingface-hub safetensors torch
+        "$tmp_dir/venv/bin/python" -m pip install --quiet huggingface-hub safetensors numpy
         "$tmp_dir/venv/bin/python" -
         """
     ).strip()
