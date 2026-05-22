@@ -42,7 +42,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.web or not args.mask:
         from libreimage.web import main as web_main
 
-        return web_main(["--host", args.host, "--port", str(args.port)])
+        web_args = ["--host", args.host, "--port", str(args.port)]
+        if args.image:
+            web_args.append(str(require_image_path(args.image)))
+        return web_main(web_args)
 
     image_path = require_image_path(args.image)
     mask_path = Path(args.mask).expanduser().resolve()

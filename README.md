@@ -64,7 +64,7 @@ uv run libre image.png
 or:
 
 ```bash
-uv run libre-web
+uv run libre-web image.png
 ```
 
 For remote development, bind to all interfaces and forward the port from your editor

@@ -3,20 +3,29 @@ from __future__ import annotations
 import argparse
 import base64
 import io
+from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from PIL import Image
 
 from libreimage.inpaint import DEFAULT_MODEL_ID, InpaintOptions, LocalInpainter
+from libreimage.paths import require_image_path
 
 
-def create_app() -> FastAPI:
+def create_app(initial_image: Path | None = None) -> FastAPI:
     app = FastAPI(title="LibreImage")
+    resolved_initial_image = require_image_path(initial_image) if initial_image else None
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> str:
         return INDEX_HTML
+
+    @app.get("/api/initial-image")
+    async def initial_image_file() -> FileResponse:
+        if resolved_initial_image is None:
+            raise HTTPException(status_code=404, detail="No initial image was provided.")
+        return FileResponse(resolved_initial_image, filename=resolved_initial_image.name)
 
     @app.post("/api/inpaint")
     async def inpaint(
@@ -67,6 +76,7 @@ def create_app() -> FastAPI:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="libre-web", description="Run the LibreImage browser UI.")
+    parser.add_argument("image", nargs="?", help="Optional image to open when the browser UI loads.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7860)
     parser.add_argument("--reload", action="store_true")
@@ -77,13 +87,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     import uvicorn
 
-    uvicorn.run(
-        "libreimage.web:create_app",
-        factory=True,
-        host=args.host,
-        port=args.port,
-        reload=args.reload,
-    )
+    app = create_app(Path(args.image).expanduser().resolve() if args.image else None)
+    uvicorn.run(app, host=args.host, port=args.port, reload=args.reload)
     return 0
 
 
@@ -386,8 +391,7 @@ INDEX_HTML = r"""<!doctype html>
       redraw();
     }
 
-    imageInput.addEventListener("change", () => {
-      const file = imageInput.files[0];
+    function loadFile(file) {
       if (!file) return;
       sourceFile = file;
       const image = new Image();
@@ -402,6 +406,11 @@ INDEX_HTML = r"""<!doctype html>
         redraw();
       };
       image.src = URL.createObjectURL(file);
+    }
+
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files[0];
+      loadFile(file);
     });
 
     canvas.addEventListener("pointerdown", (event) => {
@@ -468,7 +477,23 @@ INDEX_HTML = r"""<!doctype html>
       }
     });
 
+    async function loadInitialImage() {
+      try {
+        const response = await fetch("/api/initial-image");
+        if (response.status === 404) return;
+        if (!response.ok) throw new Error("Could not load the initial image.");
+        const blob = await response.blob();
+        const disposition = response.headers.get("content-disposition") || "";
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        const filename = match ? match[1] : "image.png";
+        loadFile(new File([blob], filename, { type: blob.type || "image/png" }));
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    }
+
     resizeStage();
+    loadInitialImage();
   </script>
 </body>
 </html>
