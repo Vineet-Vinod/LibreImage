@@ -77,6 +77,10 @@ uv run libre-web --host 0.0.0.0 --port 7860
 Open the forwarded URL in your browser, upload an image, paint the mask, then press
 `Inpaint`. The result appears in the browser with a download link.
 
+For multiple passes, press `Use Result` after a run completes. The generated image
+becomes the new source image, the mask is cleared, and the next pass is saved as a
+separate run.
+
 Each web inpaint run is also saved locally under the gitignored directory
 `tmp/libreimage/runs/<run_id>/`:
 

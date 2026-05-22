@@ -301,6 +301,10 @@ INDEX_HTML = r"""<!doctype html>
       border-radius: 6px;
       display: none;
     }
+    .secondary {
+      width: 100%;
+      margin-top: 8px;
+    }
     .empty {
       color: var(--muted);
       position: absolute;
@@ -365,6 +369,7 @@ INDEX_HTML = r"""<!doctype html>
         </div>
       </div>
       <button id="runBtn" class="primary" type="button">Inpaint</button>
+      <button id="useResultBtn" class="secondary" type="button" disabled>Use Result</button>
       <div id="status" class="status"></div>
       <div id="runInfo" class="status"></div>
       <a id="download" class="status" download="libreimage-result.png" href="#" style="display:none">Download result</a>
@@ -382,6 +387,7 @@ INDEX_HTML = r"""<!doctype html>
     const brushSize = document.getElementById("brushSize");
     const brushSizeValue = document.getElementById("brushSizeValue");
     const runBtn = document.getElementById("runBtn");
+    const useResultBtn = document.getElementById("useResultBtn");
     const statusEl = document.getElementById("status");
     const runInfo = document.getElementById("runInfo");
     const download = document.getElementById("download");
@@ -397,6 +403,8 @@ INDEX_HTML = r"""<!doctype html>
     let offsetX = 0;
     let offsetY = 0;
     let last = null;
+    let latestResultBlob = null;
+    let latestResultName = "libreimage-result.png";
 
     function setStatus(text, isError = false) {
       statusEl.textContent = text;
@@ -478,6 +486,10 @@ INDEX_HTML = r"""<!doctype html>
         maskCtx.fillStyle = "#000";
         maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
         output.style.display = "none";
+        download.style.display = "none";
+        runInfo.textContent = "";
+        latestResultBlob = null;
+        useResultBtn.disabled = true;
         setStatus(`${file.name} loaded. Paint the areas to replace.`);
         redraw();
       };
@@ -487,6 +499,12 @@ INDEX_HTML = r"""<!doctype html>
     imageInput.addEventListener("change", () => {
       const file = imageInput.files[0];
       loadFile(file);
+    });
+
+    useResultBtn.addEventListener("click", () => {
+      if (!latestResultBlob) return;
+      loadFile(new File([latestResultBlob], latestResultName, { type: "image/png" }));
+      setStatus("Loaded the previous result. Paint a new mask for the next pass.");
     });
 
     canvas.addEventListener("pointerdown", (event) => {
@@ -543,6 +561,9 @@ INDEX_HTML = r"""<!doctype html>
         if (!response.ok) throw new Error(payload.detail || "Inpaint failed.");
         output.src = payload.image;
         download.href = payload.image;
+        latestResultBlob = dataUrlToBlob(payload.image);
+        latestResultName = `${payload.run_id}-result.png`;
+        useResultBtn.disabled = false;
         download.style.display = "block";
         output.style.display = "block";
         runInfo.textContent = `Saved run ${payload.run_id}: ${payload.run_dir}`;
@@ -567,6 +588,17 @@ INDEX_HTML = r"""<!doctype html>
       } catch (error) {
         setStatus(error.message, true);
       }
+    }
+
+    function dataUrlToBlob(dataUrl) {
+      const [header, encoded] = dataUrl.split(",");
+      const mime = (header.match(/data:(.*?);/) || [])[1] || "image/png";
+      const binary = atob(encoded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new Blob([bytes], { type: mime });
     }
 
     resizeStage();
