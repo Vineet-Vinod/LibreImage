@@ -12,7 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="libre",
         description="Run local SDXL inpainting with an explicit user-supplied mask.",
     )
-    parser.add_argument("image", nargs="?", help="Image to edit. Without --mask, opens the GUI.")
+    parser.add_argument("image", nargs="?", help="Image to edit. Without --mask, starts the web UI.")
     parser.add_argument("--mask", help="Mask image. White pixels are inpainted; black pixels are kept.")
     parser.add_argument("--output", "-o", help="Output path. Defaults to <image>_libre.<ext>.")
     parser.add_argument("--model", default=DEFAULT_MODEL_ID, help="Diffusers model id.")
@@ -30,18 +30,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Bypass first-load Lima verification for already trusted local models.",
     )
-    parser.add_argument("--gui", action="store_true", help="Open the graphical mask editor.")
+    parser.add_argument("--web", action="store_true", help="Start the browser mask editor.")
+    parser.add_argument("--host", default="127.0.0.1", help="Web UI host when starting the browser editor.")
+    parser.add_argument("--port", type=int, default=7860, help="Web UI port when starting the browser editor.")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
-    if args.gui or not args.mask:
-        from libreimage.gui import main as gui_main
+    if args.web or not args.mask:
+        from libreimage.web import main as web_main
 
-        gui_args = [args.image] if args.image else []
-        return gui_main(gui_args)
+        return web_main(["--host", args.host, "--port", str(args.port)])
 
     image_path = require_image_path(args.image)
     mask_path = Path(args.mask).expanduser().resolve()

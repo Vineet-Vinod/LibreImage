@@ -53,9 +53,9 @@ uv run libre image.png --mask mask.png --output restored.png
 uv run libre image.png --mask mask.png --device mps
 ```
 
-## GUI
+## Web UI
 
-Open the mask editor:
+Start the browser mask editor:
 
 ```bash
 uv run libre image.png
@@ -64,8 +64,15 @@ uv run libre image.png
 or:
 
 ```bash
-uv run libre-gui image.png
+uv run libre-web
 ```
 
-Paint the area to replace, adjust brush size/settings, then press `Inpaint`. The app
-saves the result next to the original image with a `_libre` suffix.
+For remote development, bind to all interfaces and forward the port from your editor
+or SSH session:
+
+```bash
+uv run libre-web --host 0.0.0.0 --port 7860
+```
+
+Open the forwarded URL in your browser, upload an image, paint the mask, then press
+`Inpaint`. The result appears in the browser with a download link.
