@@ -33,6 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--web", action="store_true", help="Start the browser mask editor.")
     parser.add_argument("--host", default="127.0.0.1", help="Web UI host when starting the browser editor.")
     parser.add_argument("--port", type=int, default=7860, help="Web UI port when starting the browser editor.")
+    parser.add_argument("--tmp-dir", default="tmp/libreimage", help="Directory for web UI generated run files.")
     return parser
 
 
@@ -42,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.web or not args.mask:
         from libreimage.web import main as web_main
 
-        web_args = ["--host", args.host, "--port", str(args.port)]
+        web_args = ["--host", args.host, "--port", str(args.port), "--tmp-dir", args.tmp_dir]
         if args.image:
             web_args.append(str(require_image_path(args.image)))
         return web_main(web_args)

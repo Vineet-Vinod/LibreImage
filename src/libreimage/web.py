@@ -3,7 +3,10 @@ from __future__ import annotations
 import argparse
 import base64
 import io
+import json
 from pathlib import Path
+from uuid import uuid4
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -13,9 +16,13 @@ from libreimage.inpaint import DEFAULT_MODEL_ID, InpaintOptions, LocalInpainter
 from libreimage.paths import require_image_path
 
 
-def create_app(initial_image: Path | None = None) -> FastAPI:
+DEFAULT_TMP_DIR = Path("tmp") / "libreimage"
+
+
+def create_app(initial_image: Path | None = None, output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
     app = FastAPI(title="LibreImage")
     resolved_initial_image = require_image_path(initial_image) if initial_image else None
+    resolved_output_dir = output_dir.expanduser().resolve()
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> str:
@@ -40,6 +47,7 @@ def create_app(initial_image: Path | None = None) -> FastAPI:
         model: str = Form(DEFAULT_MODEL_ID),
     ) -> JSONResponse:
         try:
+            image_name = image.filename or "image"
             image_pil = Image.open(io.BytesIO(await image.read())).convert("RGB")
             mask_pil = Image.open(io.BytesIO(await mask.read())).convert("L")
         except Exception as exc:
@@ -66,12 +74,74 @@ def create_app(initial_image: Path | None = None) -> FastAPI:
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+        run = _persist_run(
+            output_dir=resolved_output_dir,
+            image_name=image_name,
+            image=image_pil,
+            mask=mask_pil,
+            result=result,
+            options=options,
+        )
         buffer = io.BytesIO()
         result.save(buffer, format="PNG")
         encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
-        return JSONResponse({"image": f"data:image/png;base64,{encoded}"})
+        return JSONResponse(
+            {
+                "image": f"data:image/png;base64,{encoded}",
+                "run_id": run["run_id"],
+                "run_dir": run["run_dir"],
+                "files": run["files"],
+            }
+        )
 
     return app
+
+
+def _persist_run(
+    output_dir: Path,
+    image_name: str,
+    image: Image.Image,
+    mask: Image.Image,
+    result: Image.Image,
+    options: InpaintOptions,
+) -> dict[str, object]:
+    run_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
+    run_dir = output_dir / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+
+    source_path = run_dir / "source.png"
+    mask_path = run_dir / "mask.png"
+    result_path = run_dir / "result.png"
+    meta_path = run_dir / "meta.json"
+
+    image.save(source_path)
+    mask.save(mask_path)
+    result.save(result_path)
+
+    metadata = {
+        "run_id": run_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "input_filename": image_name,
+        "image_size": list(image.size),
+        "model_id": options.model_id,
+        "revision": options.revision,
+        "prompt": options.prompt,
+        "negative_prompt": options.negative_prompt,
+        "steps": options.steps,
+        "guidance_scale": options.guidance_scale,
+        "strength": options.strength,
+        "seed": options.seed,
+        "device": options.device,
+    }
+    meta_path.write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
+
+    files = {
+        "source": str(source_path),
+        "mask": str(mask_path),
+        "result": str(result_path),
+        "meta": str(meta_path),
+    }
+    return {"run_id": run_id, "run_dir": str(run_dir), "files": files}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -79,6 +149,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("image", nargs="?", help="Optional image to open when the browser UI loads.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7860)
+    parser.add_argument("--tmp-dir", default=str(DEFAULT_TMP_DIR), help="Directory for generated run files.")
     parser.add_argument("--reload", action="store_true")
     return parser
 
@@ -87,7 +158,10 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     import uvicorn
 
-    app = create_app(Path(args.image).expanduser().resolve() if args.image else None)
+    app = create_app(
+        Path(args.image).expanduser().resolve() if args.image else None,
+        Path(args.tmp_dir),
+    )
     uvicorn.run(app, host=args.host, port=args.port, reload=args.reload)
     return 0
 
@@ -292,6 +366,7 @@ INDEX_HTML = r"""<!doctype html>
       </div>
       <button id="runBtn" class="primary" type="button">Inpaint</button>
       <div id="status" class="status"></div>
+      <div id="runInfo" class="status"></div>
       <a id="download" class="status" download="libreimage-result.png" href="#" style="display:none">Download result</a>
       <img id="output" class="output" alt="Inpaint result">
     </aside>
@@ -308,6 +383,7 @@ INDEX_HTML = r"""<!doctype html>
     const brushSizeValue = document.getElementById("brushSizeValue");
     const runBtn = document.getElementById("runBtn");
     const statusEl = document.getElementById("status");
+    const runInfo = document.getElementById("runInfo");
     const download = document.getElementById("download");
     const output = document.getElementById("output");
 
@@ -469,6 +545,7 @@ INDEX_HTML = r"""<!doctype html>
         download.href = payload.image;
         download.style.display = "block";
         output.style.display = "block";
+        runInfo.textContent = `Saved run ${payload.run_id}: ${payload.run_dir}`;
         setStatus("Done.");
       } catch (error) {
         setStatus(error.message, true);
