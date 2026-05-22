@@ -73,7 +73,7 @@ class LocalInpainter:
 
         if result.size != original_size:
             result = result.resize(original_size, Image.Resampling.LANCZOS)
-        return result
+        return Image.composite(result, image, mask.convert("L"))
 
     def _load_pipeline(self):
         if self._pipeline is not None:
