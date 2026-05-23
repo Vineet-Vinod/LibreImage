@@ -1,7 +1,7 @@
 const defaults = {
   restorePrompt: "Restore the image naturally. Repair damage, remove artifacts, preserve identity, texture, lighting, and composition.",
   negative: "text, watermark, logo, plastic skin, oversharpening, distorted geometry, extra objects",
-  restoreModel: "black-forest-labs/FLUX.1-kontext",
+  restoreModel: "black-forest-labs/FLUX.1-Kontext-dev",
   inpaintPrompt: "Natural invisible repair matching the surrounding image.",
   inpaintModel: "black-forest-labs/FLUX.1-Fill-dev",
 };

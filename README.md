@@ -70,7 +70,7 @@ views.
 Defaults:
 
 ```text
-Kontext restore: black-forest-labs/FLUX.1-kontext
+Kontext restore: black-forest-labs/FLUX.1-Kontext-dev
 Inpaint:         black-forest-labs/FLUX.1-Fill-dev
 ```
 

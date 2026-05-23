@@ -11,7 +11,7 @@ from libreimage.model_store import HF_HUB_CACHE, configure_model_environment
 from libreimage.safety import SafetyOptions, ensure_model_checked
 
 
-DEFAULT_KONTEXT_MODEL_ID = "black-forest-labs/FLUX.1-kontext"
+DEFAULT_KONTEXT_MODEL_ID = "black-forest-labs/FLUX.1-Kontext-dev"
 DEFAULT_INPAINT_MODEL_ID = "black-forest-labs/FLUX.1-Fill-dev"
 DEFAULT_RESTORE_PROMPT = "Restore the image naturally. Repair damage, remove artifacts, preserve identity, texture, lighting, and composition."
 DEFAULT_NEGATIVE_PROMPT = "text, watermark, logo, plastic skin, oversharpening, distorted geometry, extra objects"
