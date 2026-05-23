@@ -14,3 +14,7 @@ sample
 
 # Local generated runs
 tmp/
+
+# Local model storage
+models/*
+!models/.gitkeep

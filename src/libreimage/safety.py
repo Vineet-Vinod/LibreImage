@@ -9,6 +9,8 @@ import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 
+from libreimage.model_store import SAFETY_CACHE, configure_model_environment
+
 
 DEFAULT_LIMA_INSTANCE = "default"
 UNSAFE_MODEL_SUFFIXES = (".bin", ".ckpt", ".pt", ".pth", ".pkl", ".pickle")
@@ -19,7 +21,7 @@ class SafetyOptions:
     model_id: str
     revision: str | None = None
     lima_instance: str = DEFAULT_LIMA_INSTANCE
-    cache_dir: Path = Path.home() / ".cache" / "libreimage" / "safety"
+    cache_dir: Path = SAFETY_CACHE
     skip_lima: bool = False
 
 
@@ -28,6 +30,7 @@ class ModelSafetyError(RuntimeError):
 
 
 def ensure_model_checked(options: SafetyOptions) -> Path:
+    configure_model_environment()
     marker_path = _marker_path(options)
     if marker_path.exists():
         return marker_path

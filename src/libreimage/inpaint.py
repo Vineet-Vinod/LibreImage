@@ -6,6 +6,7 @@ from pathlib import Path
 from PIL import Image
 
 from libreimage.images import clamp_to_multiple_of_eight, load_mask, load_rgb
+from libreimage.model_store import HF_HUB_CACHE, configure_model_environment
 from libreimage.safety import SafetyOptions, ensure_model_checked
 
 
@@ -79,6 +80,7 @@ class LocalInpainter:
         if self._pipeline is not None:
             return self._pipeline
 
+        configure_model_environment()
         ensure_model_checked(
             SafetyOptions(
                 model_id=self.options.model_id,
@@ -97,6 +99,7 @@ class LocalInpainter:
             "revision": self.options.revision,
             "torch_dtype": dtype,
             "use_safetensors": True,
+            "cache_dir": str(HF_HUB_CACHE),
         }
         if dtype == torch.float16:
             load_kwargs["variant"] = "fp16"
