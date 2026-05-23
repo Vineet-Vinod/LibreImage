@@ -31,6 +31,15 @@ class ModelSafetyError(RuntimeError):
 
 def ensure_model_checked(options: SafetyOptions) -> Path:
     configure_model_environment()
+    local_path = Path(options.model_id).expanduser()
+    if local_path.exists():
+        marker_path = _marker_path(options)
+        if marker_path.exists():
+            return marker_path
+        payload = _verify_local_model(local_path)
+        _write_marker(marker_path, options, payload)
+        return marker_path
+
     marker_path = _marker_path(options)
     if marker_path.exists():
         return marker_path
@@ -84,6 +93,20 @@ def _marker_path(options: SafetyOptions) -> Path:
     key = f"{options.model_id}@{options.revision or 'main'}"
     digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
     return options.cache_dir / f"{digest}.json"
+
+
+def _verify_local_model(model_path: Path) -> dict[str, object]:
+    unsafe = [
+        str(path.relative_to(model_path))
+        for suffix in UNSAFE_MODEL_SUFFIXES
+        for path in model_path.rglob(f"*{suffix}")
+    ]
+    if unsafe:
+        raise ModelSafetyError("Refusing local model with unsafe serialized weights: " + ", ".join(unsafe))
+    safetensors = [str(path.relative_to(model_path)) for path in model_path.rglob("*.safetensors")]
+    if not safetensors:
+        raise ModelSafetyError(f"Local model does not contain safetensors weights: {model_path}")
+    return {"local_path": str(model_path), "safe_tensors": safetensors, "file_count": len(list(model_path.rglob('*')))}
 
 
 def _write_marker(marker_path: Path, options: SafetyOptions, payload: dict[str, object]) -> None:

@@ -70,13 +70,14 @@ views.
 Defaults:
 
 ```text
-Kontext restore: black-forest-labs/FLUX.1-Kontext-dev
+Kontext restore: models/FLUX.1-Kontext-dev
 Inpaint:         black-forest-labs/FLUX.1-Fill-dev
 ```
 
-The first model load can be slow because weights are downloaded into `models/`
-and then kept for reuse. The backend caches loaded pipelines in process so
-repeated tuning runs avoid reloading model weights.
+The Kontext weights are vendored directly under `models/FLUX.1-Kontext-dev`.
+Additional model ids or local model directories can still be entered in the UI.
+The backend caches loaded pipelines in process so repeated tuning runs avoid
+reloading model weights.
 
 LibreImage still performs the Lima first-load safety check unless you explicitly
 enable the per-run "Skip Lima safety" checkbox for a trusted model.
