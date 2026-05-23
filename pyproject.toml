@@ -1,12 +1,12 @@
 [project]
 name = "libreimage"
 version = "0.1.0"
-description = "Local SDXL inpainting for user-supplied masks"
+description = "Local network web app for image restoration workflows"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "accelerate>=0.31",
-    "diffusers>=0.30",
+    "diffusers>=0.36",
     "fastapi>=0.111",
     "huggingface-hub>=0.23",
     "numpy>=1.26",
@@ -19,7 +19,6 @@ dependencies = [
 ]
 
 [project.scripts]
-libre = "libreimage.cli:main"
 libre-web = "libreimage.web:main"
 
 [tool.uv]
@@ -31,3 +30,4 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/libreimage"]
+include = ["src/libreimage/static/*"]

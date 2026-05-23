@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LibreImage</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">LibreImage</div>
+      <nav class="steps" aria-label="Pipeline stages">
+        <button class="step active" data-stage="upload" type="button">Upload</button>
+        <button class="step" data-stage="restore" type="button">Kontext</button>
+        <button class="step" data-stage="inpaint" type="button">Inpaint</button>
+        <button class="step" data-stage="sharpen" type="button">Sharpen</button>
+        <button class="step" data-stage="final" type="button">Final</button>
+      </nav>
+      <div id="status" class="status">Starting session...</div>
+    </header>
+
+    <section id="upload" class="view upload-view active">
+      <label class="dropzone" for="uploadInput">
+        <input id="uploadInput" type="file" accept="image/*">
+        <span class="drop-title">Drop or choose an image</span>
+        <span class="drop-subtitle">Temporary work stays under the current local session.</span>
+      </label>
+      <div class="upload-library">
+        <h2>Session Library</h2>
+        <div id="uploadGrid" class="grid"></div>
+      </div>
+    </section>
+
+    <section id="restore" class="view restore-view">
+      <aside class="panel">
+        <h2>Kontext Restore</h2>
+        <label>Prompt<textarea id="restorePrompt"></textarea></label>
+        <label>Negative Prompt<textarea id="restoreNegative"></textarea></label>
+        <label>Model<input id="restoreModel" type="text"></label>
+        <div class="field-pair">
+          <label>Steps<input id="restoreSteps" type="number" min="1" max="80" value="24"></label>
+          <label>Seed<input id="restoreSeed" type="text" placeholder="random"></label>
+        </div>
+        <div class="field-pair">
+          <label>Guidance<input id="restoreGuidance" type="number" min="0" max="20" step="0.1" value="2.5"></label>
+          <label>Strength<input id="restoreStrength" type="number" min="0" max="1" step="0.05" value="0.35"></label>
+        </div>
+        <label>LoRA Scale<input id="restoreLora" type="number" min="0" max="2" step="0.05" value="1"></label>
+        <label class="check"><input id="restoreSkipSafety" type="checkbox"> Skip Lima safety for trusted local models</label>
+        <button id="runRestore" class="primary" type="button">Run Kontext</button>
+      </aside>
+      <section class="preview">
+        <div class="image-shell"><img id="restoreImage" alt=""></div>
+        <div class="preview-actions">
+          <button id="restoreUseLatest" type="button">Use Latest Result</button>
+          <button class="danger" data-delete-current="restore" type="button">Delete Selected</button>
+        </div>
+      </section>
+    </section>
+
+    <section id="inpaint" class="view editor-view">
+      <aside class="panel">
+        <h2>Inpaint</h2>
+        <label>Prompt<textarea id="inpaintPrompt"></textarea></label>
+        <label>Negative Prompt<textarea id="inpaintNegative"></textarea></label>
+        <label>Model<input id="inpaintModel" type="text"></label>
+        <div class="field-pair">
+          <label>Steps<input id="inpaintSteps" type="number" min="1" max="80" value="28"></label>
+          <label>Seed<input id="inpaintSeed" type="text" placeholder="random"></label>
+        </div>
+        <div class="field-pair">
+          <label>Guidance<input id="inpaintGuidance" type="number" min="0" max="20" step="0.1" value="3.5"></label>
+          <label>Strength<input id="inpaintStrength" type="number" min="0" max="1" step="0.05" value="0.9"></label>
+        </div>
+        <label>LoRA Scale<input id="inpaintLora" type="number" min="0" max="2" step="0.05" value="1"></label>
+        <label class="check"><input id="inpaintSkipSafety" type="checkbox"> Skip Lima safety for trusted local models</label>
+        <button id="runInpaint" class="primary" type="button">Run Inpaint</button>
+      </aside>
+      <section class="compare">
+        <div class="canvas-card">
+          <div class="toolrow">
+            <button id="brushBtn" class="active" type="button">Brush</button>
+            <button id="eraseBtn" type="button">Eraser</button>
+            <button id="clearMask" type="button">Clear</button>
+            <label class="range">Size<input id="brushSize" type="range" min="4" max="180" value="48"></label>
+          </div>
+          <canvas id="maskCanvas"></canvas>
+        </div>
+        <div class="image-shell"><img id="inpaintResult" alt=""></div>
+      </section>
+      <div id="inpaintGallery" class="filmstrip"></div>
+    </section>
+
+    <section id="sharpen" class="view editor-view">
+      <aside class="panel">
+        <h2>Sharpen</h2>
+        <label>Radius<input id="sharpRadius" type="number" min="0.1" max="5" step="0.1" value="1.4"></label>
+        <label>Amount<input id="sharpAmount" type="number" min="0" max="4" step="0.05" value="1.15"></label>
+        <label>Threshold<input id="sharpThreshold" type="number" min="0" max="32" value="3"></label>
+        <label>Contrast<input id="sharpContrast" type="number" min="0.5" max="1.8" step="0.01" value="1.02"></label>
+        <label>Color<input id="sharpColor" type="number" min="0" max="1.8" step="0.01" value="1"></label>
+        <button id="runSharpen" class="primary" type="button">Run Sharpen</button>
+        <button class="danger" data-delete-current="sharpen" type="button">Delete Selected</button>
+      </aside>
+      <section class="compare">
+        <div class="image-shell"><img id="sharpenSource" alt=""></div>
+        <div class="image-shell"><img id="sharpenResult" alt=""></div>
+      </section>
+      <div id="sharpenGallery" class="filmstrip"></div>
+    </section>
+
+    <section id="final" class="view final-view">
+      <div class="slideshow">
+        <button id="prevImage" class="arrow" type="button" aria-label="Previous image">&lt;</button>
+        <div class="image-shell"><img id="finalImage" alt=""></div>
+        <button id="nextImage" class="arrow" type="button" aria-label="Next image">&gt;</button>
+      </div>
+      <aside class="final-panel">
+        <h2 id="finalTitle">No image selected</h2>
+        <button id="saveCurrent" class="primary" type="button">Save Current To Folder</button>
+        <button id="saveAll" type="button">Save All To Folder</button>
+        <button id="restartFromFinal" type="button">Restart From This Image</button>
+        <button class="danger" data-delete-current="final" type="button">Delete Selected</button>
+      </aside>
+      <div id="finalGallery" class="filmstrip"></div>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

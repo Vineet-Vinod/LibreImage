@@ -1,155 +1,224 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import io
-import json
+from dataclasses import asdict
 from pathlib import Path
-from uuid import uuid4
-from datetime import datetime, timezone
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from PIL import Image
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from PIL import Image, ImageOps
 
-from libreimage.inpaint import DEFAULT_MODEL_ID, InpaintOptions, LocalInpainter
+from libreimage.model_store import configure_model_environment
 from libreimage.paths import require_image_path
+from libreimage.pipelines import (
+    DEFAULT_INPAINT_MODEL_ID,
+    DEFAULT_KONTEXT_MODEL_ID,
+    KontextInpainter,
+    KontextInpaintOptions,
+    KontextOptions,
+    KontextRestorer,
+    LocalSharpener,
+    SharpenOptions,
+)
+from libreimage.session_store import SessionStore
 
 
 DEFAULT_TMP_DIR = Path("tmp") / "libreimage"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 def create_app(initial_image: Path | None = None, output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
+    configure_model_environment()
     app = FastAPI(title="LibreImage")
+    store = SessionStore(output_dir)
     resolved_initial_image = require_image_path(initial_image) if initial_image else None
-    resolved_output_dir = output_dir.expanduser().resolve()
 
-    @app.get("/", response_class=HTMLResponse)
-    async def index() -> str:
-        return INDEX_HTML
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-    @app.get("/api/initial-image")
-    async def initial_image_file() -> FileResponse:
-        if resolved_initial_image is None:
-            raise HTTPException(status_code=404, detail="No initial image was provided.")
-        return FileResponse(resolved_initial_image, filename=resolved_initial_image.name)
+    @app.get("/")
+    async def index() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
 
-    @app.post("/api/inpaint")
-    async def inpaint(
-        image: UploadFile = File(...),
-        mask: UploadFile = File(...),
-        prompt: str = Form(InpaintOptions.prompt),
-        negative_prompt: str = Form(InpaintOptions.negative_prompt),
-        steps: int = Form(InpaintOptions.steps),
-        guidance_scale: float = Form(InpaintOptions.guidance_scale),
-        strength: float = Form(InpaintOptions.strength),
-        seed: str = Form(""),
-        model: str = Form(DEFAULT_MODEL_ID),
-    ) -> JSONResponse:
+    @app.post("/api/session")
+    async def create_session() -> JSONResponse:
+        session_id = store.create_session()
+        if resolved_initial_image is not None:
+            image = ImageOps.exif_transpose(Image.open(resolved_initial_image)).convert("RGB")
+            store.add_upload(session_id, image, resolved_initial_image.name)
+        return JSONResponse({"session_id": session_id, "images": _images_payload(store, session_id)})
+
+    @app.get("/api/session/{session_id}/images")
+    async def list_images(session_id: str) -> JSONResponse:
+        _require_session(store, session_id)
+        return JSONResponse({"images": _images_payload(store, session_id)})
+
+    @app.get("/api/session/{session_id}/images/{image_id}")
+    async def image_file(session_id: str, image_id: str) -> FileResponse:
+        path = _require_image_path(store, session_id, image_id)
+        return FileResponse(path, media_type="image/png", filename=path.name)
+
+    @app.post("/api/session/{session_id}/upload")
+    async def upload(session_id: str, image: UploadFile = File(...)) -> JSONResponse:
+        _require_session(store, session_id)
+        pil = await _read_upload_image(image)
+        item = store.add_upload(session_id, pil, image.filename or "upload.png")
+        return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
+
+    @app.delete("/api/session/{session_id}/images/{image_id}")
+    async def delete_image(session_id: str, image_id: str) -> JSONResponse:
+        _require_session(store, session_id)
         try:
-            image_name = image.filename or "image"
-            image_pil = Image.open(io.BytesIO(await image.read())).convert("RGB")
-            mask_pil = Image.open(io.BytesIO(await mask.read())).convert("L")
-        except Exception as exc:
-            raise HTTPException(status_code=400, detail=f"Invalid image or mask: {exc}") from exc
+            store.delete_image(session_id, image_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Image not found.") from exc
+        return JSONResponse({"images": _images_payload(store, session_id)})
 
-        if mask_pil.size != image_pil.size:
-            mask_pil = mask_pil.resize(image_pil.size, Image.Resampling.NEAREST)
-        if mask_pil.getbbox() is None:
-            raise HTTPException(status_code=400, detail="Mask is empty. Paint an area before running inpaint.")
-
-        parsed_seed = int(seed) if seed.strip() else None
-        options = InpaintOptions(
-            model_id=model.strip() or DEFAULT_MODEL_ID,
-            prompt=prompt.strip() or InpaintOptions.prompt,
-            negative_prompt=negative_prompt.strip() or InpaintOptions.negative_prompt,
-            steps=max(1, min(int(steps), 100)),
+    @app.post("/api/session/{session_id}/restore")
+    async def restore(
+        session_id: str,
+        image_id: str = Form(...),
+        prompt: str = Form(KontextOptions.prompt),
+        negative_prompt: str = Form(KontextOptions.negative_prompt),
+        model: str = Form(DEFAULT_KONTEXT_MODEL_ID),
+        steps: int = Form(KontextOptions.steps),
+        guidance_scale: float = Form(KontextOptions.guidance_scale),
+        strength: float = Form(KontextOptions.strength),
+        lora_scale: float = Form(KontextOptions.lora_scale),
+        seed: str = Form(""),
+        skip_lima_safety: bool = Form(False),
+    ) -> JSONResponse:
+        source = _load_store_image(store, session_id, image_id)
+        options = KontextOptions(
+            model_id=model.strip() or DEFAULT_KONTEXT_MODEL_ID,
+            prompt=prompt.strip() or KontextOptions.prompt,
+            negative_prompt=negative_prompt.strip() or KontextOptions.negative_prompt,
+            steps=max(1, min(int(steps), 80)),
             guidance_scale=float(guidance_scale),
             strength=max(0.0, min(float(strength), 1.0)),
-            seed=parsed_seed,
+            lora_scale=max(0.0, min(float(lora_scale), 2.0)),
+            seed=_parse_seed(seed),
+            skip_lima_safety=skip_lima_safety,
         )
+        result = KontextRestorer(options).run(source)
+        item = store.add_image(session_id, result, "restore", "Kontext restore", image_id, asdict(options))
+        return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
 
-        try:
-            result = LocalInpainter(options).run_images(image_pil, mask_pil)
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+    @app.post("/api/session/{session_id}/inpaint")
+    async def inpaint(
+        session_id: str,
+        mask: UploadFile = File(...),
+        image_id: str = Form(...),
+        prompt: str = Form(KontextInpaintOptions.prompt),
+        negative_prompt: str = Form(KontextInpaintOptions.negative_prompt),
+        model: str = Form(DEFAULT_INPAINT_MODEL_ID),
+        steps: int = Form(KontextInpaintOptions.steps),
+        guidance_scale: float = Form(KontextInpaintOptions.guidance_scale),
+        strength: float = Form(KontextInpaintOptions.strength),
+        lora_scale: float = Form(KontextInpaintOptions.lora_scale),
+        seed: str = Form(""),
+        skip_lima_safety: bool = Form(False),
+    ) -> JSONResponse:
+        source = _load_store_image(store, session_id, image_id)
+        mask_image = await _read_mask(mask, source.size)
+        if mask_image.getbbox() is None:
+            raise HTTPException(status_code=400, detail="Mask is empty. Paint an area before running inpaint.")
+        options = KontextInpaintOptions(
+            model_id=model.strip() or DEFAULT_INPAINT_MODEL_ID,
+            prompt=prompt.strip() or KontextInpaintOptions.prompt,
+            negative_prompt=negative_prompt.strip() or KontextInpaintOptions.negative_prompt,
+            steps=max(1, min(int(steps), 80)),
+            guidance_scale=float(guidance_scale),
+            strength=max(0.0, min(float(strength), 1.0)),
+            lora_scale=max(0.0, min(float(lora_scale), 2.0)),
+            seed=_parse_seed(seed),
+            skip_lima_safety=skip_lima_safety,
+        )
+        result = KontextInpainter(options).run(source, mask_image)
+        item = store.add_image(session_id, result, "inpaint", "Inpaint repair", image_id, asdict(options))
+        return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
 
-        run = _persist_run(
-            output_dir=resolved_output_dir,
-            image_name=image_name,
-            image=image_pil,
-            mask=mask_pil,
-            result=result,
-            options=options,
+    @app.post("/api/session/{session_id}/sharpen")
+    async def sharpen(
+        session_id: str,
+        image_id: str = Form(...),
+        radius: float = Form(SharpenOptions.radius),
+        amount: float = Form(SharpenOptions.amount),
+        threshold: int = Form(SharpenOptions.threshold),
+        contrast: float = Form(SharpenOptions.contrast),
+        color: float = Form(SharpenOptions.color),
+    ) -> JSONResponse:
+        source = _load_store_image(store, session_id, image_id)
+        options = SharpenOptions(
+            radius=max(0.1, min(float(radius), 5.0)),
+            amount=max(0.0, min(float(amount), 4.0)),
+            threshold=max(0, min(int(threshold), 32)),
+            contrast=max(0.5, min(float(contrast), 1.8)),
+            color=max(0.0, min(float(color), 1.8)),
         )
-        buffer = io.BytesIO()
-        result.save(buffer, format="PNG")
-        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
-        return JSONResponse(
-            {
-                "image": f"data:image/png;base64,{encoded}",
-                "run_id": run["run_id"],
-                "run_dir": run["run_dir"],
-                "files": run["files"],
-            }
-        )
+        result = LocalSharpener(options).run(source)
+        item = store.add_image(session_id, result, "sharpen", "Sharpen pass", image_id, asdict(options))
+        return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
 
     return app
 
 
-def _persist_run(
-    output_dir: Path,
-    image_name: str,
-    image: Image.Image,
-    mask: Image.Image,
-    result: Image.Image,
-    options: InpaintOptions,
-) -> dict[str, object]:
-    run_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
-    run_dir = output_dir / "runs" / run_id
-    run_dir.mkdir(parents=True, exist_ok=False)
+def _images_payload(store: SessionStore, session_id: str) -> list[dict[str, object]]:
+    return [_image_payload(image, session_id) for image in store.list_images(session_id)]
 
-    source_path = run_dir / "source.png"
-    mask_path = run_dir / "mask.png"
-    result_path = run_dir / "result.png"
-    meta_path = run_dir / "meta.json"
 
-    image.save(source_path)
-    mask.save(mask_path)
-    result.save(result_path)
+def _image_payload(image, session_id: str) -> dict[str, object]:
+    payload = asdict(image)
+    payload["url"] = f"/api/session/{session_id}/images/{image.id}"
+    return payload
 
-    metadata = {
-        "run_id": run_id,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "input_filename": image_name,
-        "image_size": list(image.size),
-        "model_id": options.model_id,
-        "revision": options.revision,
-        "prompt": options.prompt,
-        "negative_prompt": options.negative_prompt,
-        "steps": options.steps,
-        "guidance_scale": options.guidance_scale,
-        "strength": options.strength,
-        "seed": options.seed,
-        "device": options.device,
-    }
-    meta_path.write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
 
-    files = {
-        "source": str(source_path),
-        "mask": str(mask_path),
-        "result": str(result_path),
-        "meta": str(meta_path),
-    }
-    return {"run_id": run_id, "run_dir": str(run_dir), "files": files}
+def _require_session(store: SessionStore, session_id: str) -> None:
+    try:
+        store.list_images(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Session not found.") from exc
+
+
+def _require_image_path(store: SessionStore, session_id: str, image_id: str) -> Path:
+    try:
+        return store.image_path(session_id, image_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Image not found.") from exc
+
+
+def _load_store_image(store: SessionStore, session_id: str, image_id: str) -> Image.Image:
+    return Image.open(_require_image_path(store, session_id, image_id)).convert("RGB")
+
+
+async def _read_upload_image(upload: UploadFile) -> Image.Image:
+    try:
+        return ImageOps.exif_transpose(Image.open(io.BytesIO(await upload.read()))).convert("RGB")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid image: {exc}") from exc
+
+
+async def _read_mask(upload: UploadFile, size: tuple[int, int]) -> Image.Image:
+    try:
+        mask = Image.open(io.BytesIO(await upload.read())).convert("L")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid mask: {exc}") from exc
+    if mask.size != size:
+        mask = mask.resize(size, Image.Resampling.NEAREST)
+    return mask
+
+
+def _parse_seed(seed: str) -> int | None:
+    return int(seed) if seed.strip() else None
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="libre-web", description="Run the LibreImage browser UI.")
-    parser.add_argument("image", nargs="?", help="Optional image to open when the browser UI loads.")
+    parser = argparse.ArgumentParser(prog="libre-web", description="Run the LibreImage web app.")
+    parser.add_argument("image", nargs="?", help="Optional image to add to a new session when the UI loads.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7860)
-    parser.add_argument("--tmp-dir", default=str(DEFAULT_TMP_DIR), help="Directory for generated run files.")
+    parser.add_argument("--tmp-dir", default=str(DEFAULT_TMP_DIR), help="Directory for session files.")
     parser.add_argument("--reload", action="store_true")
     return parser
 
@@ -164,449 +233,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     uvicorn.run(app, host=args.host, port=args.port, reload=args.reload)
     return 0
-
-
-INDEX_HTML = r"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LibreImage</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #14161a;
-      --panel: #20242a;
-      --panel-2: #252b33;
-      --text: #edf1f7;
-      --muted: #a9b2c3;
-      --line: #3a4250;
-      --accent: #4fb7ff;
-      --danger: #ff6d6d;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: var(--bg);
-      color: var(--text);
-      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    .app {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 340px;
-      min-height: 100vh;
-    }
-    .workspace {
-      display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
-      min-width: 0;
-    }
-    .topbar, .sidebar {
-      background: var(--panel);
-      border-color: var(--line);
-    }
-    .topbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--line);
-      min-width: 0;
-    }
-    .brand {
-      font-weight: 700;
-      margin-right: 8px;
-      white-space: nowrap;
-    }
-    .toolgroup {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-width: 0;
-    }
-    .canvas-wrap {
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      background: #0f1115;
-      min-height: 0;
-      position: relative;
-    }
-    #stage {
-      max-width: 100%;
-      max-height: 100%;
-      touch-action: none;
-      background: #111;
-      box-shadow: 0 0 0 1px #000;
-    }
-    .sidebar {
-      border-left: 1px solid var(--line);
-      padding: 14px;
-      overflow: auto;
-    }
-    label {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      margin: 14px 0 6px;
-    }
-    input[type="text"], input[type="number"], textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--panel-2);
-      color: var(--text);
-      padding: 9px 10px;
-      font: inherit;
-    }
-    textarea { min-height: 74px; resize: vertical; }
-    input[type="file"] { max-width: 100%; color: var(--muted); }
-    input[type="range"] { width: 160px; }
-    button {
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--panel-2);
-      color: var(--text);
-      padding: 8px 11px;
-      font: inherit;
-      cursor: pointer;
-    }
-    button.active { border-color: var(--accent); color: #dff3ff; }
-    button.primary {
-      width: 100%;
-      margin-top: 16px;
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #05131e;
-      font-weight: 700;
-    }
-    button:disabled { opacity: 0.55; cursor: wait; }
-    .row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .row > * { flex: 1; }
-    .status {
-      margin-top: 12px;
-      min-height: 20px;
-      color: var(--muted);
-      overflow-wrap: anywhere;
-    }
-    .output {
-      margin-top: 14px;
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      display: none;
-    }
-    .secondary {
-      width: 100%;
-      margin-top: 8px;
-    }
-    .empty {
-      color: var(--muted);
-      position: absolute;
-      text-align: center;
-      padding: 24px;
-      pointer-events: none;
-    }
-    @media (max-width: 900px) {
-      .app { grid-template-columns: 1fr; grid-template-rows: minmax(360px, 1fr) auto; }
-      .sidebar { border-left: 0; border-top: 1px solid var(--line); max-height: 44vh; }
-      .topbar { flex-wrap: wrap; }
-    }
-  </style>
-</head>
-<body>
-  <main class="app">
-    <section class="workspace">
-      <div class="topbar">
-        <div class="brand">LibreImage</div>
-        <input id="imageInput" type="file" accept="image/*">
-        <div class="toolgroup">
-          <button id="brushBtn" class="active" type="button">Brush</button>
-          <button id="eraseBtn" type="button">Erase</button>
-          <button id="clearBtn" type="button">Clear</button>
-        </div>
-        <div class="toolgroup">
-          <span>Size</span>
-          <input id="brushSize" type="range" min="4" max="180" value="48">
-          <span id="brushSizeValue">48</span>
-        </div>
-      </div>
-      <div class="canvas-wrap">
-        <canvas id="stage"></canvas>
-        <div id="empty" class="empty">Open an image to paint a mask.</div>
-      </div>
-    </section>
-    <aside class="sidebar">
-      <label for="prompt">Prompt</label>
-      <textarea id="prompt">natural clean image, realistic texture, seamless restoration</textarea>
-      <label for="negativePrompt">Negative Prompt</label>
-      <textarea id="negativePrompt">text, logo, watermark, label, caption, blurry, distorted</textarea>
-      <label for="model">Model</label>
-      <input id="model" type="text" value="diffusers/stable-diffusion-xl-1.0-inpainting-0.1">
-      <div class="row">
-        <div>
-          <label for="steps">Steps</label>
-          <input id="steps" type="number" min="1" max="100" value="30">
-        </div>
-        <div>
-          <label for="seed">Seed</label>
-          <input id="seed" type="text" placeholder="random">
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label for="guidance">Guidance</label>
-          <input id="guidance" type="number" min="1" max="20" step="0.5" value="7.5">
-        </div>
-        <div>
-          <label for="strength">Strength</label>
-          <input id="strength" type="number" min="0.1" max="1" step="0.05" value="0.99">
-        </div>
-      </div>
-      <button id="runBtn" class="primary" type="button">Inpaint</button>
-      <button id="useResultBtn" class="secondary" type="button" disabled>Use Result</button>
-      <div id="status" class="status"></div>
-      <div id="runInfo" class="status"></div>
-      <a id="download" class="status" download="libreimage-result.png" href="#" style="display:none">Download result</a>
-      <img id="output" class="output" alt="Inpaint result">
-    </aside>
-  </main>
-  <script>
-    const imageInput = document.getElementById("imageInput");
-    const canvas = document.getElementById("stage");
-    const ctx = canvas.getContext("2d");
-    const empty = document.getElementById("empty");
-    const brushBtn = document.getElementById("brushBtn");
-    const eraseBtn = document.getElementById("eraseBtn");
-    const clearBtn = document.getElementById("clearBtn");
-    const brushSize = document.getElementById("brushSize");
-    const brushSizeValue = document.getElementById("brushSizeValue");
-    const runBtn = document.getElementById("runBtn");
-    const useResultBtn = document.getElementById("useResultBtn");
-    const statusEl = document.getElementById("status");
-    const runInfo = document.getElementById("runInfo");
-    const download = document.getElementById("download");
-    const output = document.getElementById("output");
-
-    let sourceFile = null;
-    let sourceImage = null;
-    let maskCanvas = document.createElement("canvas");
-    let maskCtx = maskCanvas.getContext("2d");
-    let painting = false;
-    let mode = "paint";
-    let scale = 1;
-    let offsetX = 0;
-    let offsetY = 0;
-    let last = null;
-    let latestResultBlob = null;
-    let latestResultName = "libreimage-result.png";
-
-    function setStatus(text, isError = false) {
-      statusEl.textContent = text;
-      statusEl.style.color = isError ? "var(--danger)" : "var(--muted)";
-    }
-
-    function setMode(next) {
-      mode = next;
-      brushBtn.classList.toggle("active", mode === "paint");
-      eraseBtn.classList.toggle("active", mode === "erase");
-    }
-
-    function resizeStage() {
-      const wrap = canvas.parentElement.getBoundingClientRect();
-      canvas.width = Math.max(1, Math.floor(wrap.width));
-      canvas.height = Math.max(1, Math.floor(wrap.height));
-      redraw();
-    }
-
-    function redraw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (!sourceImage) {
-        empty.style.display = "block";
-        return;
-      }
-      empty.style.display = "none";
-      scale = Math.min(canvas.width / sourceImage.width, canvas.height / sourceImage.height, 1);
-      const drawW = Math.round(sourceImage.width * scale);
-      const drawH = Math.round(sourceImage.height * scale);
-      offsetX = Math.floor((canvas.width - drawW) / 2);
-      offsetY = Math.floor((canvas.height - drawH) / 2);
-      ctx.drawImage(sourceImage, offsetX, offsetY, drawW, drawH);
-      ctx.save();
-      ctx.globalAlpha = 0.42;
-      ctx.fillStyle = "#ff4848";
-      ctx.drawImage(maskCanvas, offsetX, offsetY, drawW, drawH);
-      ctx.globalCompositeOperation = "source-atop";
-      ctx.fillRect(offsetX, offsetY, drawW, drawH);
-      ctx.restore();
-    }
-
-    function canvasToImage(event) {
-      if (!sourceImage) return null;
-      const rect = canvas.getBoundingClientRect();
-      const x = (event.clientX - rect.left - offsetX) / scale;
-      const y = (event.clientY - rect.top - offsetY) / scale;
-      if (x < 0 || y < 0 || x >= sourceImage.width || y >= sourceImage.height) return null;
-      return { x, y };
-    }
-
-    function drawStroke(a, b) {
-      if (!a || !b) return;
-      const width = Number(brushSize.value);
-      maskCtx.save();
-      maskCtx.lineCap = "round";
-      maskCtx.lineJoin = "round";
-      maskCtx.lineWidth = width;
-      maskCtx.strokeStyle = mode === "paint" ? "#fff" : "#000";
-      maskCtx.fillStyle = maskCtx.strokeStyle;
-      maskCtx.beginPath();
-      maskCtx.moveTo(a.x, a.y);
-      maskCtx.lineTo(b.x, b.y);
-      maskCtx.stroke();
-      maskCtx.beginPath();
-      maskCtx.arc(b.x, b.y, width / 2, 0, Math.PI * 2);
-      maskCtx.fill();
-      maskCtx.restore();
-      redraw();
-    }
-
-    function loadFile(file) {
-      if (!file) return;
-      sourceFile = file;
-      const image = new Image();
-      image.onload = () => {
-        sourceImage = image;
-        maskCanvas.width = image.width;
-        maskCanvas.height = image.height;
-        maskCtx.fillStyle = "#000";
-        maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-        output.style.display = "none";
-        download.style.display = "none";
-        runInfo.textContent = "";
-        latestResultBlob = null;
-        useResultBtn.disabled = true;
-        setStatus(`${file.name} loaded. Paint the areas to replace.`);
-        redraw();
-      };
-      image.src = URL.createObjectURL(file);
-    }
-
-    imageInput.addEventListener("change", () => {
-      const file = imageInput.files[0];
-      loadFile(file);
-    });
-
-    useResultBtn.addEventListener("click", () => {
-      if (!latestResultBlob) return;
-      loadFile(new File([latestResultBlob], latestResultName, { type: "image/png" }));
-      setStatus("Loaded the previous result. Paint a new mask for the next pass.");
-    });
-
-    canvas.addEventListener("pointerdown", (event) => {
-      const point = canvasToImage(event);
-      if (!point) return;
-      painting = true;
-      last = point;
-      canvas.setPointerCapture(event.pointerId);
-      drawStroke(point, point);
-    });
-    canvas.addEventListener("pointermove", (event) => {
-      if (!painting) return;
-      const point = canvasToImage(event);
-      if (!point) return;
-      drawStroke(last, point);
-      last = point;
-    });
-    canvas.addEventListener("pointerup", () => { painting = false; last = null; });
-    canvas.addEventListener("pointercancel", () => { painting = false; last = null; });
-
-    brushBtn.addEventListener("click", () => setMode("paint"));
-    eraseBtn.addEventListener("click", () => setMode("erase"));
-    clearBtn.addEventListener("click", () => {
-      if (!sourceImage) return;
-      maskCtx.fillStyle = "#000";
-      maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-      redraw();
-    });
-    brushSize.addEventListener("input", () => { brushSizeValue.textContent = brushSize.value; });
-    window.addEventListener("resize", resizeStage);
-
-    runBtn.addEventListener("click", async () => {
-      if (!sourceFile || !sourceImage) {
-        setStatus("Open an image first.", true);
-        return;
-      }
-      const maskBlob = await new Promise(resolve => maskCanvas.toBlob(resolve, "image/png"));
-      const form = new FormData();
-      form.append("image", sourceFile, sourceFile.name);
-      form.append("mask", maskBlob, "mask.png");
-      form.append("prompt", document.getElementById("prompt").value);
-      form.append("negative_prompt", document.getElementById("negativePrompt").value);
-      form.append("model", document.getElementById("model").value);
-      form.append("steps", document.getElementById("steps").value);
-      form.append("guidance_scale", document.getElementById("guidance").value);
-      form.append("strength", document.getElementById("strength").value);
-      form.append("seed", document.getElementById("seed").value);
-
-      runBtn.disabled = true;
-      setStatus("Running inpaint. Model loading may take a moment.");
-      try {
-        const response = await fetch("/api/inpaint", { method: "POST", body: form });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.detail || "Inpaint failed.");
-        output.src = payload.image;
-        download.href = payload.image;
-        latestResultBlob = dataUrlToBlob(payload.image);
-        latestResultName = `${payload.run_id}-result.png`;
-        useResultBtn.disabled = false;
-        download.style.display = "block";
-        output.style.display = "block";
-        runInfo.textContent = `Saved run ${payload.run_id}: ${payload.run_dir}`;
-        setStatus("Done.");
-      } catch (error) {
-        setStatus(error.message, true);
-      } finally {
-        runBtn.disabled = false;
-      }
-    });
-
-    async function loadInitialImage() {
-      try {
-        const response = await fetch("/api/initial-image");
-        if (response.status === 404) return;
-        if (!response.ok) throw new Error("Could not load the initial image.");
-        const blob = await response.blob();
-        const disposition = response.headers.get("content-disposition") || "";
-        const match = disposition.match(/filename="?([^"]+)"?/);
-        const filename = match ? match[1] : "image.png";
-        loadFile(new File([blob], filename, { type: blob.type || "image/png" }));
-      } catch (error) {
-        setStatus(error.message, true);
-      }
-    }
-
-    function dataUrlToBlob(dataUrl) {
-      const [header, encoded] = dataUrl.split(",");
-      const mime = (header.match(/data:(.*?);/) || [])[1] || "image/png";
-      const binary = atob(encoded);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      return new Blob([bytes], { type: mime });
-    }
-
-    resizeStage();
-    loadInitialImage();
-  </script>
-</body>
-</html>
-"""
 
 
 if __name__ == "__main__":

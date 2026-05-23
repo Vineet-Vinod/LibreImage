@@ -446,7 +446,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "accelerate", specifier = ">=0.31" },
-    { name = "diffusers", specifier = ">=0.30" },
+    { name = "diffusers", specifier = ">=0.36" },
     { name = "fastapi", specifier = ">=0.111" },
     { name = "huggingface-hub", specifier = ">=0.23" },
     { name = "numpy", specifier = ">=1.26" },

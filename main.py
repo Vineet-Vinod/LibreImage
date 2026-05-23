@@ -1,4 +1,4 @@
-from libreimage.cli import main
+from libreimage.web import main
 
 
 if __name__ == "__main__":
