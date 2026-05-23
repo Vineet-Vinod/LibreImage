@@ -135,7 +135,7 @@ def _verification_script(model_id: str, revision: str | None) -> str:
         if not safetensor_files:
             raise SystemExit("Model does not publish safetensors weights.")
 
-        cache_dir = os.path.expanduser("~/.cache/libreimage-safety/huggingface")
+        cache_dir = os.path.expanduser("~/libreimage-model-safety/huggingface")
         os.makedirs(cache_dir, exist_ok=True)
         local_dir = snapshot_download(
             repo_id=model_id,
