@@ -71,10 +71,16 @@ Defaults:
 
 ```text
 Kontext restore: models/FLUX.1-Kontext-dev
-Inpaint:         black-forest-labs/FLUX.1-Fill-dev
+Inpaint:         models/stable-diffusion-xl-1.0-inpainting-0.1
 ```
 
-The Kontext weights are vendored directly under `models/FLUX.1-Kontext-dev`.
+The currently vendored models are:
+
+```text
+models/FLUX.1-Kontext-dev
+models/stable-diffusion-xl-1.0-inpainting-0.1
+```
+
 Additional model ids or local model directories can still be entered in the UI.
 The backend caches loaded pipelines in process so repeated tuning runs avoid
 reloading model weights.

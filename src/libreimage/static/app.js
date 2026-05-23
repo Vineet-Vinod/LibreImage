@@ -3,7 +3,7 @@ const defaults = {
   negative: "text, watermark, logo, plastic skin, oversharpening, distorted geometry, extra objects",
   restoreModel: "models/FLUX.1-Kontext-dev",
   inpaintPrompt: "Natural invisible repair matching the surrounding image.",
-  inpaintModel: "black-forest-labs/FLUX.1-Fill-dev",
+  inpaintModel: "models/stable-diffusion-xl-1.0-inpainting-0.1",
 };
 
 const state = {

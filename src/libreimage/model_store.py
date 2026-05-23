@@ -10,6 +10,7 @@ HF_HOME = MODELS_DIR / ".hf"
 HF_HUB_CACHE = HF_HOME / "hub"
 SAFETY_CACHE = MODELS_DIR / "safety"
 VENDORED_KONTEXT_MODEL = MODELS_DIR / "FLUX.1-Kontext-dev"
+VENDORED_SDXL_INPAINT_MODEL = MODELS_DIR / "stable-diffusion-xl-1.0-inpainting-0.1"
 
 
 def configure_model_environment() -> None:

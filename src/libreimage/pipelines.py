@@ -7,12 +7,18 @@ from inspect import signature
 from PIL import Image, ImageEnhance, ImageFilter
 
 from libreimage.images import clamp_to_multiple_of_eight
-from libreimage.model_store import HF_HUB_CACHE, VENDORED_KONTEXT_MODEL, configure_model_environment, resolve_model_path
+from libreimage.model_store import (
+    HF_HUB_CACHE,
+    VENDORED_KONTEXT_MODEL,
+    VENDORED_SDXL_INPAINT_MODEL,
+    configure_model_environment,
+    resolve_model_path,
+)
 from libreimage.safety import SafetyOptions, ensure_model_checked
 
 
 DEFAULT_KONTEXT_MODEL_ID = "models/FLUX.1-Kontext-dev"
-DEFAULT_INPAINT_MODEL_ID = "black-forest-labs/FLUX.1-Fill-dev"
+DEFAULT_INPAINT_MODEL_ID = "models/stable-diffusion-xl-1.0-inpainting-0.1"
 DEFAULT_RESTORE_PROMPT = "Restore the image naturally. Repair damage, remove artifacts, preserve identity, texture, lighting, and composition."
 DEFAULT_NEGATIVE_PROMPT = "text, watermark, logo, plastic skin, oversharpening, distorted geometry, extra objects"
 DEFAULT_INPAINT_PROMPT = "Natural invisible repair matching the surrounding image."
@@ -150,7 +156,7 @@ def _load_kontext_pipeline(model_id: str, device: str, skip_lima_safety: bool):
 
 @lru_cache(maxsize=2)
 def _load_inpaint_pipeline(model_id: str, device: str, skip_lima_safety: bool):
-    resolved_model = resolve_model_path(model_id)
+    resolved_model = resolve_model_path(model_id or VENDORED_SDXL_INPAINT_MODEL)
     ensure_model_checked(SafetyOptions(model_id=resolved_model, skip_lima=skip_lima_safety))
     import torch
     from diffusers import AutoPipelineForInpainting

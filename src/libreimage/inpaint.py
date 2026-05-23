@@ -6,11 +6,11 @@ from pathlib import Path
 from PIL import Image
 
 from libreimage.images import clamp_to_multiple_of_eight, load_mask, load_rgb
-from libreimage.model_store import HF_HUB_CACHE, configure_model_environment
+from libreimage.model_store import HF_HUB_CACHE, resolve_model_path, configure_model_environment
 from libreimage.safety import SafetyOptions, ensure_model_checked
 
 
-DEFAULT_MODEL_ID = "diffusers/stable-diffusion-xl-1.0-inpainting-0.1"
+DEFAULT_MODEL_ID = "models/stable-diffusion-xl-1.0-inpainting-0.1"
 DEFAULT_PROMPT = "natural clean image, realistic texture, seamless restoration"
 DEFAULT_NEGATIVE_PROMPT = "text, logo, watermark, label, caption, blurry, distorted"
 
@@ -83,7 +83,7 @@ class LocalInpainter:
         configure_model_environment()
         ensure_model_checked(
             SafetyOptions(
-                model_id=self.options.model_id,
+                model_id=resolve_model_path(self.options.model_id),
                 revision=self.options.revision,
                 lima_instance=self.options.lima_instance,
                 skip_lima=self.options.skip_lima_safety,
@@ -103,7 +103,7 @@ class LocalInpainter:
         }
         if dtype == torch.float16:
             load_kwargs["variant"] = "fp16"
-        pipeline = AutoPipelineForInpainting.from_pretrained(self.options.model_id, **load_kwargs)
+        pipeline = AutoPipelineForInpainting.from_pretrained(resolve_model_path(self.options.model_id), **load_kwargs)
         pipeline = pipeline.to(self._device)
         pipeline.enable_attention_slicing()
 
