@@ -1,8 +1,12 @@
 # LibreImage
 
-Local SDXL inpainting for images you own or have rights to edit. LibreImage does not
-auto-detect or remove ownership/licensing marks; it works from an explicit mask that
-you provide in the CLI or paint in the GUI.
+LibreImage is a local-network web app for image restoration experiments on this
+Mac. The workflow is session based: uploads and generated intermediates are kept
+under `tmp/libreimage/`, while only final images you explicitly save are written
+to a folder you choose in the browser.
+
+There is no supported CLI workflow. Start the web app and use it from the
+browser.
 
 ## Setup
 
@@ -10,89 +14,76 @@ you provide in the CLI or paint in the GUI.
 uv sync
 ```
 
-The default model is `diffusers/stable-diffusion-xl-1.0-inpainting-0.1`.
+Model files are stored only inside the repo-local `models/` directory. The app
+sets Hugging Face, Diffusers, Transformers, and safety-marker cache environment
+variables before loading models so downloads do not go to `~/.cache`.
 
-On Apple Silicon, the pipeline selects MPS automatically when available. CUDA is used
-when available on other systems, otherwise CPU is used.
+`models/` and `tmp/` are gitignored.
 
-## First model load
-
-Before the host process loads a model for the first time, LibreImage verifies the
-model inside a Lima instance. The check rejects unsafe serialized weight formats and
-requires safetensors weights.
-
-Start a Lima instance before the first run:
+## Run
 
 ```bash
-limactl start default
+uv run libre-web
 ```
 
-If you are using a model you already trust and want to bypass this gate:
+Open:
 
-```bash
-LIBREIMAGE_SKIP_LIMA_SAFETY=1 uv run libre image.png --mask mask.png
+```text
+http://127.0.0.1:7860
 ```
 
-or use `--skip-lima-safety`.
-
-## CLI
-
-White mask pixels are replaced. Black mask pixels are preserved.
-
-```bash
-uv run libre image.png --mask mask.png
-```
-
-The result is written next to the input image as `image_libre.png` by default.
-
-Useful options:
-
-```bash
-uv run libre image.png --mask mask.png --steps 40 --seed 123 --prompt "natural clean restoration"
-uv run libre image.png --mask mask.png --output restored.png
-uv run libre image.png --mask mask.png --device mps
-```
-
-## Web UI
-
-Start the browser mask editor:
-
-```bash
-uv run libre image.png
-```
-
-or:
-
-```bash
-uv run libre-web image.png
-```
-
-For remote development, bind to all interfaces and forward the port from your editor
-or SSH session:
+To use the app from another device on the local network:
 
 ```bash
 uv run libre-web --host 0.0.0.0 --port 7860
 ```
 
-Open the forwarded URL in your browser, upload an image, paint the mask, then press
-`Inpaint`. The result appears in the browser with a download link.
+Then open `http://<mac-studio-ip>:7860` from the other device.
 
-For multiple passes, press `Use Result` after a run completes. The generated image
-becomes the new source image, the mask is cleared, and the next pass is saved as a
-separate run.
-
-Each web inpaint run is also saved locally under the gitignored directory
-`tmp/libreimage/runs/<run_id>/`:
-
-```text
-source.png
-mask.png
-result.png
-meta.json
-```
-
-Use `--tmp-dir` to store those run files somewhere else:
+You can optionally seed a new session with an image:
 
 ```bash
-uv run libre-web image.png --tmp-dir /path/to/runs
+uv run libre-web /path/to/image.png
 ```
+
+## Workflow
+
+1. Upload an image.
+2. Run the Kontext restoration stage. Tune prompt, negative prompt, steps,
+   guidance, strength, LoRA scale, seed, and model id. Every successful run is
+   saved as a temporary session image.
+3. Move to Inpaint. Select any saved image from the bottom filmstrip, paint a
+   mask with the brush or eraser, tune the inpaint params, and save more
+   intermediates.
+4. Move to Sharpen. Select any intermediate, tune the local sharpening controls,
+   and save sharpened variants.
+5. Use Final to review every image in a slideshow. Arrow keys navigate between
+   images. Save the current image or all images to a browser-selected folder.
+   You can restart at the Kontext stage from the currently selected final image
+   without clearing the rest of the session library.
+
+Intermediate images can be deleted from the Kontext, Inpaint, Sharpen, and Final
+views.
+
+## Models
+
+Defaults:
+
+```text
+Kontext restore: black-forest-labs/FLUX.1-kontext
+Inpaint:         black-forest-labs/FLUX.1-Fill-dev
+```
+
+The first model load can be slow because weights are downloaded into `models/`
+and then kept for reuse. The backend caches loaded pipelines in process so
+repeated tuning runs avoid reloading model weights.
+
+LibreImage still performs the Lima first-load safety check unless you explicitly
+enable the per-run "Skip Lima safety" checkbox for a trusted model.
+
+## Apple Silicon Performance
+
+The app automatically selects MPS when available, enables PyTorch MPS fallback,
+keeps pipeline instances warm in memory, and avoids CPU offload on MPS. For best
+throughput, keep the server running while tuning so the loaded model cache stays
+hot.
