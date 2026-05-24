@@ -164,11 +164,11 @@ def _load_inpaint_pipeline(device: str):
 
 def _optimize_pipeline(pipe, device: str):
     pipe = pipe.to(device)
-    if device != "mps" and hasattr(pipe, "enable_attention_slicing"):
+    if hasattr(pipe, "enable_attention_slicing"):
         pipe.enable_attention_slicing()
-    if device != "mps" and hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
+    if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
         pipe.vae.enable_slicing()
-    elif device != "mps" and hasattr(pipe, "enable_vae_slicing"):
+    elif hasattr(pipe, "enable_vae_slicing"):
         pipe.enable_vae_slicing()
     if device == "cuda" and hasattr(pipe, "enable_model_cpu_offload"):
         pipe.enable_model_cpu_offload()

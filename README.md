@@ -21,8 +21,9 @@ missing model into `models/`.
 
 LibreImage is tuned for Apple Silicon with PyTorch MPS. The bundled models are
 large: Flux Kontext is the limiting stage and loaded in float16 uses about 33 GB
-of MPS allocation in smoke tests on an M3 Ultra, with higher temporary driver
-memory during inference.
+of MPS allocation in smoke tests on an M3 Ultra. Attention and VAE slicing are
+enabled by default; this is slower than the unsliced path in small benchmarks but
+produced better text-removal results during restoration testing.
 
 Recommended:
 
@@ -30,7 +31,8 @@ Recommended:
 - 64 GB unified memory minimum for practical Flux Kontext use.
 - 128 GB or more unified memory for comfortable tuning and keeping both
   pipelines warm.
-- Enough disk space under `models/` for both downloaded model directories.
+- 100 GB or more free disk space. The bundled local model directories are about
+  51 GB combined, before temporary outputs and cache growth.
 
 CPU fallback is available through PyTorch but is expected to be very slow. CUDA
 may work through PyTorch on suitable hardware, but this project is not tuned or
