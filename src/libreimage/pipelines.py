@@ -172,11 +172,13 @@ def _load_inpaint_pipeline(model_id: str, device: str):
 
 def _optimize_pipeline(pipe, device: str):
     pipe = pipe.to(device)
-    if hasattr(pipe, "enable_attention_slicing"):
+    if device != "mps" and hasattr(pipe, "enable_attention_slicing"):
         pipe.enable_attention_slicing()
-    if hasattr(pipe, "enable_vae_slicing"):
+    if device != "mps" and hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
+        pipe.vae.enable_slicing()
+    elif device != "mps" and hasattr(pipe, "enable_vae_slicing"):
         pipe.enable_vae_slicing()
-    if hasattr(pipe, "enable_model_cpu_offload") and device != "mps":
+    if device == "cuda" and hasattr(pipe, "enable_model_cpu_offload"):
         pipe.enable_model_cpu_offload()
     try:
         pipe.unet.to(memory_format=__import__("torch").channels_last)
@@ -218,6 +220,6 @@ def _resolve_device(requested: str, torch_module) -> str:
 
 
 def _dtype_for_device(device: str, torch_module):
-    if device == "cuda":
+    if device in {"cuda", "mps"}:
         return torch_module.float16
     return torch_module.float32
