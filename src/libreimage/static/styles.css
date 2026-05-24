@@ -1,16 +1,18 @@
 :root {
-  color-scheme: dark;
-  --bg: #050706;
-  --surface: #0c100e;
-  --panel: #111713;
-  --panel-2: #172019;
-  --text: #f4f0e8;
-  --muted: #9ea69b;
-  --line: #263329;
-  --accent: #d8ff75;
-  --accent-2: #7ee787;
-  --danger: #ff7b72;
-  --shadow: rgba(0, 0, 0, 0.45);
+  color-scheme: light;
+  --bg: #fff8f7;
+  --surface: rgba(255, 255, 255, 0.88);
+  --panel: rgba(255, 255, 255, 0.9);
+  --panel-2: #fff6f7;
+  --text: #251017;
+  --muted: #876b73;
+  --line: #ead0d6;
+  --accent: #c72454;
+  --accent-dark: #8b1739;
+  --accent-soft: #ffdedd;
+  --blue: #6e90d8;
+  --danger: #b4233c;
+  --shadow: rgba(139, 23, 57, 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -19,7 +21,10 @@ body {
   margin: 0;
   height: 100vh;
   overflow: hidden;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at top left, rgba(199, 36, 84, 0.08), transparent 28rem),
+    radial-gradient(circle at top right, rgba(139, 23, 57, 0.08), transparent 26rem),
+    linear-gradient(180deg, #fffdfc 0%, var(--bg) 100%);
   color: var(--text);
   font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -28,7 +33,7 @@ button, input, textarea { font: inherit; }
 
 button {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--panel-2);
   color: var(--text);
   min-height: 36px;
@@ -36,14 +41,23 @@ button {
   cursor: pointer;
 }
 
-button:hover { border-color: #53624f; }
+button:hover {
+  border-color: #e4b4c0;
+  color: var(--accent-dark);
+  box-shadow: inset 0 0 0 2px rgba(199, 36, 84, 0.12);
+}
 button:disabled { opacity: 0.55; cursor: wait; }
-button.active, .step.active { border-color: var(--accent); color: var(--accent); }
+button.active, .step.active {
+  border-color: var(--line);
+  color: var(--accent-dark);
+  background: #fff;
+  box-shadow: inset 0 0 0 2px rgba(199, 36, 84, 0.16);
+}
 
 .primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, #d83a63 0%, var(--accent-dark) 100%);
   border-color: var(--accent);
-  color: #10140b;
+  color: #fff;
   font-weight: 800;
 }
 
@@ -61,7 +75,9 @@ button.active, .step.active { border-color: var(--accent); color: var(--accent);
   gap: 16px;
   align-items: center;
   border-bottom: 1px solid var(--line);
-  background: #070a08;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 18px 48px var(--shadow);
+  backdrop-filter: blur(14px);
   padding: 10px 14px;
 }
 
@@ -81,7 +97,7 @@ button.active, .step.active { border-color: var(--accent); color: var(--accent);
 .step {
   white-space: nowrap;
   min-width: 82px;
-  background: #0d120f;
+  background: transparent;
 }
 
 .status {
@@ -96,8 +112,8 @@ button.active, .step.active { border-color: var(--accent); color: var(--accent);
   min-height: 0;
   display: none;
   background:
-    linear-gradient(180deg, rgba(216, 255, 117, 0.035), transparent 220px),
-    var(--bg);
+    radial-gradient(circle at top left, rgba(199, 36, 84, 0.055), transparent 26rem),
+    linear-gradient(180deg, #fffdfc 0%, var(--bg) 100%);
 }
 
 .view.active { display: grid; }
@@ -110,15 +126,15 @@ button.active, .step.active { border-color: var(--accent); color: var(--accent);
 
 .dropzone {
   min-height: 0;
-  border: 1px dashed #4a5a45;
-  border-radius: 8px;
+  border: 1px dashed #d99aaa;
+  border-radius: 28px;
   background: var(--surface);
   display: grid;
   place-items: center;
   align-content: center;
   gap: 10px;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(216, 255, 117, 0.03);
+  box-shadow: 0 20px 60px var(--shadow), inset 0 0 0 1px rgba(199, 36, 84, 0.05);
 }
 
 .dropzone input { display: none; }
@@ -148,15 +164,18 @@ h2 {
 
 .thumb {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 18px;
   background: var(--panel);
   padding: 8px;
   display: grid;
   gap: 8px;
 }
 
-.thumb.selected { border-color: var(--accent); }
-.thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #020302; border-radius: 5px; }
+.thumb.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px rgba(199, 36, 84, 0.14);
+}
+.thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fffdfc; border-radius: 12px; }
 .thumb-title { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
 
 .restore-view {
@@ -175,6 +194,7 @@ h2 {
   padding: 16px;
   background: var(--panel);
   border-right: 1px solid var(--line);
+  box-shadow: 18px 0 48px rgba(139, 23, 57, 0.06);
 }
 
 label {
@@ -190,10 +210,16 @@ label {
 input, textarea {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #090d0b;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
   color: var(--text);
   padding: 9px 10px;
+}
+
+input:focus, textarea:focus {
+  border-color: #d83a63;
+  box-shadow: 0 0 0 3px rgba(199, 36, 84, 0.12);
+  outline: 0;
 }
 
 textarea { min-height: 92px; resize: vertical; }
@@ -220,8 +246,9 @@ textarea { min-height: 92px; resize: vertical; }
   place-items: center;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #020302;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 246, 247, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
   box-shadow: 0 18px 50px var(--shadow);
 }
 
@@ -246,8 +273,8 @@ textarea { min-height: 92px; resize: vertical; }
   display: grid;
   grid-template-rows: 48px minmax(0, 1fr);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #020302;
+  border-radius: 18px;
+  background: #fffdfc;
   overflow: hidden;
 }
 
@@ -284,7 +311,8 @@ textarea { min-height: 92px; resize: vertical; }
   gap: 10px;
   padding: 10px 14px;
   border-top: 1px solid var(--line);
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 -16px 44px rgba(139, 23, 57, 0.06);
 }
 
 .filmstrip .thumb {
@@ -310,7 +338,7 @@ textarea { min-height: 92px; resize: vertical; }
 .arrow {
   height: 100%;
   font-size: 38px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .final-panel {
