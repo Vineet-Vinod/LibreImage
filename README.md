@@ -84,9 +84,6 @@ Additional model ids or local model directories can still be entered in the UI.
 The backend caches loaded pipelines in process so repeated tuning runs avoid
 reloading model weights.
 
-LibreImage still performs the Lima first-load safety check unless you explicitly
-enable the per-run "Skip Lima safety" checkbox for a trusted model.
-
 ## Apple Silicon Performance
 
 The app automatically selects MPS when available, enables PyTorch MPS fallback,

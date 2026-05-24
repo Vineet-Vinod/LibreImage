@@ -188,7 +188,6 @@ function appendCommon(form, prefix, imageId) {
   form.append("strength", $(`${prefix}Strength`).value);
   form.append("lora_scale", $(`${prefix}Lora`).value);
   form.append("seed", $(`${prefix}Seed`).value);
-  form.append("skip_lima_safety", $(`${prefix}SkipSafety`).checked ? "true" : "false");
 }
 
 async function runGeneration(stage, url, form) {

@@ -87,7 +87,6 @@ def create_app(initial_image: Path | None = None, output_dir: Path = DEFAULT_TMP
         strength: float = Form(KontextOptions.strength),
         lora_scale: float = Form(KontextOptions.lora_scale),
         seed: str = Form(""),
-        skip_lima_safety: bool = Form(False),
     ) -> JSONResponse:
         source = _load_store_image(store, session_id, image_id)
         options = KontextOptions(
@@ -99,7 +98,6 @@ def create_app(initial_image: Path | None = None, output_dir: Path = DEFAULT_TMP
             strength=max(0.0, min(float(strength), 1.0)),
             lora_scale=max(0.0, min(float(lora_scale), 2.0)),
             seed=_parse_seed(seed),
-            skip_lima_safety=skip_lima_safety,
         )
         result = KontextRestorer(options).run(source)
         item = store.add_image(session_id, result, "restore", "Kontext restore", image_id, asdict(options))
@@ -118,7 +116,6 @@ def create_app(initial_image: Path | None = None, output_dir: Path = DEFAULT_TMP
         strength: float = Form(KontextInpaintOptions.strength),
         lora_scale: float = Form(KontextInpaintOptions.lora_scale),
         seed: str = Form(""),
-        skip_lima_safety: bool = Form(False),
     ) -> JSONResponse:
         source = _load_store_image(store, session_id, image_id)
         mask_image = await _read_mask(mask, source.size)
@@ -133,7 +130,6 @@ def create_app(initial_image: Path | None = None, output_dir: Path = DEFAULT_TMP
             strength=max(0.0, min(float(strength), 1.0)),
             lora_scale=max(0.0, min(float(lora_scale), 2.0)),
             seed=_parse_seed(seed),
-            skip_lima_safety=skip_lima_safety,
         )
         result = KontextInpainter(options).run(source, mask_image)
         item = store.add_image(session_id, result, "inpaint", "Inpaint repair", image_id, asdict(options))

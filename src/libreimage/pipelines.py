@@ -35,7 +35,6 @@ class KontextOptions:
     lora_scale: float = 1.0
     seed: int | None = None
     device: str = "auto"
-    skip_lima_safety: bool = False
 
 
 @dataclass(frozen=True)
@@ -49,7 +48,6 @@ class KontextInpaintOptions:
     lora_scale: float = 1.0
     seed: int | None = None
     device: str = "auto"
-    skip_lima_safety: bool = False
 
 
 @dataclass(frozen=True)
@@ -67,7 +65,7 @@ class KontextRestorer:
 
     def run(self, image: Image.Image) -> Image.Image:
         configure_model_environment()
-        pipe = _load_kontext_pipeline(self.options.model_id, self.options.device, self.options.skip_lima_safety)
+        pipe = _load_kontext_pipeline(self.options.model_id, self.options.device)
         work_image = clamp_to_multiple_of_eight(image.convert("RGB"))
         generator = _generator(self.options.seed, pipe.device.type)
         kwargs = {
@@ -94,7 +92,7 @@ class KontextInpainter:
 
     def run(self, image: Image.Image, mask: Image.Image) -> Image.Image:
         configure_model_environment()
-        pipe = _load_inpaint_pipeline(self.options.model_id, self.options.device, self.options.skip_lima_safety)
+        pipe = _load_inpaint_pipeline(self.options.model_id, self.options.device)
         original_size = image.size
         work_image = clamp_to_multiple_of_eight(image.convert("RGB"))
         work_mask = clamp_to_multiple_of_eight(mask.convert("L"))
@@ -137,9 +135,9 @@ class LocalSharpener:
 
 
 @lru_cache(maxsize=2)
-def _load_kontext_pipeline(model_id: str, device: str, skip_lima_safety: bool):
+def _load_kontext_pipeline(model_id: str, device: str):
     resolved_model = resolve_model_path(model_id or VENDORED_KONTEXT_MODEL)
-    ensure_model_checked(SafetyOptions(model_id=resolved_model, skip_lima=skip_lima_safety))
+    ensure_model_checked(SafetyOptions(model_id=resolved_model))
     import torch
     from diffusers import FluxKontextPipeline
 
@@ -155,9 +153,9 @@ def _load_kontext_pipeline(model_id: str, device: str, skip_lima_safety: bool):
 
 
 @lru_cache(maxsize=2)
-def _load_inpaint_pipeline(model_id: str, device: str, skip_lima_safety: bool):
+def _load_inpaint_pipeline(model_id: str, device: str):
     resolved_model = resolve_model_path(model_id or VENDORED_SDXL_INPAINT_MODEL)
-    ensure_model_checked(SafetyOptions(model_id=resolved_model, skip_lima=skip_lima_safety))
+    ensure_model_checked(SafetyOptions(model_id=resolved_model))
     import torch
     from diffusers import AutoPipelineForInpainting
 

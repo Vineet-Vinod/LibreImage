@@ -26,8 +26,6 @@ class InpaintOptions:
     strength: float = 0.99
     seed: int | None = None
     device: str = "auto"
-    lima_instance: str = "default"
-    skip_lima_safety: bool = False
 
 
 class LocalInpainter:
@@ -85,8 +83,6 @@ class LocalInpainter:
             SafetyOptions(
                 model_id=resolve_model_path(self.options.model_id),
                 revision=self.options.revision,
-                lima_instance=self.options.lima_instance,
-                skip_lima=self.options.skip_lima_safety,
             )
         )
 
