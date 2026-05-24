@@ -214,7 +214,7 @@ def _parse_seed(seed: str) -> int | None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="libre-web", description="Run the LibreImage web app.")
+    parser = argparse.ArgumentParser(prog="libreimage", description="Run the LibreImage web app.")
     parser.add_argument("image", nargs="?", help="Optional image to add to a new session when the UI loads.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7860)

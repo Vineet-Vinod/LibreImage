@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-libre-web = "libreimage.web:main"
+libreimage = "libreimage.web:main"
 
 [tool.uv]
 package = true

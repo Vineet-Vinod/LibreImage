@@ -1,7 +1,6 @@
 # LibreImage
 
-LibreImage is a local-network web app for image restoration experiments on this
-Mac. The workflow is session based: uploads and generated intermediates are kept
+LibreImage is a local-network web app for image restoration. The workflow is session based: uploads and generated intermediates are kept
 under `tmp/libreimage/`, while only final images you explicitly save are written
 to a folder you choose in the browser.
 
@@ -23,7 +22,7 @@ variables before loading models so downloads do not go to `~/.cache`.
 ## Run
 
 ```bash
-uv run libre-web
+uv run libreimage
 ```
 
 Open:
@@ -35,7 +34,7 @@ http://127.0.0.1:7860
 To use the app from another device on the local network:
 
 ```bash
-uv run libre-web --host 0.0.0.0 --port 7860
+uv run libreimage --host 0.0.0.0 --port 7860
 ```
 
 Then open `http://<mac-studio-ip>:7860` from the other device.
@@ -43,7 +42,7 @@ Then open `http://<mac-studio-ip>:7860` from the other device.
 You can optionally seed a new session with an image:
 
 ```bash
-uv run libre-web /path/to/image.png
+uv run libreimage /path/to/image.png
 ```
 
 ## Workflow
