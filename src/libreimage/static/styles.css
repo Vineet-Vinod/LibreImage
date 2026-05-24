@@ -202,6 +202,7 @@ h2 {
 
 .restore-view {
   grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 124px;
   gap: 0;
 }
 

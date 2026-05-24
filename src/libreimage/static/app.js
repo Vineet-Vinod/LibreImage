@@ -86,6 +86,7 @@ function render() {
 
 function renderGrids() {
   renderGrid($("uploadGrid"), state.images);
+  renderFilmstrip($("restoreGallery"), stageCandidates(["upload", "restore"]));
   renderFilmstrip($("inpaintGallery"), stageCandidates(["upload", "restore", "inpaint"]));
   renderFilmstrip($("sharpenGallery"), stageCandidates(["upload", "restore", "inpaint", "sharpen"]));
   renderFilmstrip($("finalGallery"), state.images);
