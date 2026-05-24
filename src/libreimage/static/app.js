@@ -123,11 +123,20 @@ function renderStageImages() {
   const image = selectedImage();
   const url = image ? imageUrl(image) : "";
   $("restoreImage").src = url;
+  setImageAspect($("restoreShell"), image);
   $("inpaintResult").src = url;
   $("sharpenSource").src = url;
   $("sharpenResult").src = latestByStage("sharpen") ? imageUrl(latestByStage("sharpen")) : url;
   renderFinal();
   if (state.stage === "inpaint" && image && state.mask.source !== image.id) prepareMask(image);
+}
+
+function setImageAspect(element, image) {
+  if (!element || !image || !image.width || !image.height) {
+    element?.style.removeProperty("--image-aspect");
+    return;
+  }
+  element.style.setProperty("--image-aspect", String(image.width / image.height));
 }
 
 function latestByStage(stage) {
