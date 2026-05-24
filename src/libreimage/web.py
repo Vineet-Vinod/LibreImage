@@ -11,7 +11,6 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageOps
 
 from libreimage.model_store import configure_model_environment
-from libreimage.paths import require_image_path
 from libreimage.pipelines import (
     DEFAULT_INPAINT_MODEL_ID,
     DEFAULT_KONTEXT_MODEL_ID,
@@ -29,11 +28,10 @@ DEFAULT_TMP_DIR = Path("tmp") / "libreimage"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
-def create_app(initial_image: Path | None = None, output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
+def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
     configure_model_environment()
     app = FastAPI(title="LibreImage")
     store = SessionStore(output_dir)
-    resolved_initial_image = require_image_path(initial_image) if initial_image else None
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -44,9 +42,6 @@ def create_app(initial_image: Path | None = None, output_dir: Path = DEFAULT_TMP
     @app.post("/api/session")
     async def create_session() -> JSONResponse:
         session_id = store.create_session()
-        if resolved_initial_image is not None:
-            image = ImageOps.exif_transpose(Image.open(resolved_initial_image)).convert("RGB")
-            store.add_upload(session_id, image, resolved_initial_image.name)
         return JSONResponse({"session_id": session_id, "images": _images_payload(store, session_id)})
 
     @app.get("/api/session/{session_id}/images")
@@ -211,7 +206,6 @@ def _parse_seed(seed: str) -> int | None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="libreimage", description="Run the LibreImage web app.")
-    parser.add_argument("image", nargs="?", help="Optional image to add to a new session when the UI loads.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7860)
     parser.add_argument("--tmp-dir", default=str(DEFAULT_TMP_DIR), help="Directory for session files.")
@@ -223,10 +217,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     import uvicorn
 
-    app = create_app(
-        Path(args.image).expanduser().resolve() if args.image else None,
-        Path(args.tmp_dir),
-    )
+    app = create_app(Path(args.tmp_dir))
     uvicorn.run(app, host=args.host, port=args.port, reload=args.reload)
     return 0
 

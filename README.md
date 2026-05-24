@@ -34,13 +34,7 @@ To use the app from another device on the local network:
 uv run libreimage --host 0.0.0.0 --port 7860
 ```
 
-Then open `http://<mac-studio-ip>:7860` from the other device.
-
-You can optionally seed a new session with an image:
-
-```bash
-uv run libreimage /path/to/image.png
-```
+Then open `http://<server-ip>:7860` from the other device.
 
 ## Workflow
 
