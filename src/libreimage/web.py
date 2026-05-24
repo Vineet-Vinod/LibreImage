@@ -12,8 +12,6 @@ from PIL import Image, ImageOps
 
 from libreimage.model_store import configure_model_environment
 from libreimage.pipelines import (
-    DEFAULT_INPAINT_MODEL_ID,
-    DEFAULT_KONTEXT_MODEL_ID,
     KontextInpainter,
     KontextInpaintOptions,
     KontextOptions,
@@ -76,22 +74,18 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
         image_id: str = Form(...),
         prompt: str = Form(KontextOptions.prompt),
         negative_prompt: str = Form(KontextOptions.negative_prompt),
-        model: str = Form(DEFAULT_KONTEXT_MODEL_ID),
         steps: int = Form(KontextOptions.steps),
         guidance_scale: float = Form(KontextOptions.guidance_scale),
         strength: float = Form(KontextOptions.strength),
-        lora_scale: float = Form(KontextOptions.lora_scale),
         seed: str = Form(""),
     ) -> JSONResponse:
         source = _load_store_image(store, session_id, image_id)
         options = KontextOptions(
-            model_id=model.strip() or DEFAULT_KONTEXT_MODEL_ID,
             prompt=prompt.strip() or KontextOptions.prompt,
             negative_prompt=negative_prompt.strip() or KontextOptions.negative_prompt,
             steps=max(1, min(int(steps), 80)),
             guidance_scale=float(guidance_scale),
             strength=max(0.0, min(float(strength), 1.0)),
-            lora_scale=max(0.0, min(float(lora_scale), 2.0)),
             seed=_parse_seed(seed),
         )
         result = KontextRestorer(options).run(source)
@@ -105,7 +99,6 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
         image_id: str = Form(...),
         prompt: str = Form(KontextInpaintOptions.prompt),
         negative_prompt: str = Form(KontextInpaintOptions.negative_prompt),
-        model: str = Form(DEFAULT_INPAINT_MODEL_ID),
         steps: int = Form(KontextInpaintOptions.steps),
         guidance_scale: float = Form(KontextInpaintOptions.guidance_scale),
         strength: float = Form(KontextInpaintOptions.strength),
@@ -116,7 +109,6 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
         if mask_image.getbbox() is None:
             raise HTTPException(status_code=400, detail="Mask is empty. Paint an area before running inpaint.")
         options = KontextInpaintOptions(
-            model_id=model.strip() or DEFAULT_INPAINT_MODEL_ID,
             prompt=prompt.strip() or KontextInpaintOptions.prompt,
             negative_prompt=negative_prompt.strip() or KontextInpaintOptions.negative_prompt,
             steps=max(1, min(int(steps), 80)),

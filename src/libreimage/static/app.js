@@ -1,9 +1,7 @@
 const defaults = {
   restorePrompt: "Restore the image naturally. Repair damage, remove artifacts, preserve identity, texture, lighting, and composition.",
   negative: "text, watermark, logo, plastic skin, oversharpening, distorted geometry, extra objects",
-  restoreModel: "models/FLUX.1-Kontext-dev",
   inpaintPrompt: "Natural invisible repair matching the surrounding image.",
-  inpaintModel: "models/stable-diffusion-xl-1.0-inpainting-0.1",
 };
 
 const state = {
@@ -209,11 +207,9 @@ function appendCommon(form, prefix, imageId) {
   form.append("image_id", imageId);
   form.append("prompt", $(`${prefix}Prompt`).value);
   form.append("negative_prompt", $(`${prefix}Negative`).value);
-  form.append("model", $(`${prefix}Model`).value);
   form.append("steps", $(`${prefix}Steps`).value);
   form.append("guidance_scale", $(`${prefix}Guidance`).value);
   form.append("strength", $(`${prefix}Strength`).value);
-  if ($(`${prefix}Lora`)) form.append("lora_scale", $(`${prefix}Lora`).value);
   form.append("seed", $(`${prefix}Seed`).value);
 }
 
@@ -342,10 +338,8 @@ async function saveImages(images) {
 function bindEvents() {
   $("restorePrompt").value = defaults.restorePrompt;
   $("restoreNegative").value = defaults.negative;
-  $("restoreModel").value = defaults.restoreModel;
   $("inpaintPrompt").value = defaults.inpaintPrompt;
   $("inpaintNegative").value = defaults.negative;
-  $("inpaintModel").value = defaults.inpaintModel;
 
   document.querySelectorAll(".step").forEach((button) => button.addEventListener("click", () => setStage(button.dataset.stage)));
   $("uploadInput").addEventListener("change", (event) => uploadFile(event.target.files[0]));

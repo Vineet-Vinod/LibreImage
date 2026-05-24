@@ -11,9 +11,9 @@ in the browser.
 uv sync
 ```
 
-Model files are stored only inside the repo-local `models/` directory. The app
-sets Hugging Face, Diffusers, Transformers, and safety-marker cache environment
-variables before loading models so downloads do not go to `~/.cache`.
+Model files are stored only inside the repo-local `models/` directory. On first
+use, the app checks for the bundled model directories there and downloads any
+missing model into `models/`.
 
 `models/` and `tmp/` are gitignored.
 
@@ -41,8 +41,8 @@ Then open `http://<server-ip>:7860` from the other device.
 
 1. Upload an image.
 2. Run the Kontext restoration stage. Tune prompt, negative prompt, steps,
-   guidance, strength, LoRA scale, seed, and model id. Every successful run is
-   saved as a temporary session image.
+   guidance, strength, and seed. Every successful run is saved as a temporary
+   session image.
 3. Move to Inpaint. Select any saved image from the bottom filmstrip, paint a
    mask with the brush or eraser, tune the inpaint params, and save more
    intermediates.
@@ -58,16 +58,16 @@ views.
 
 ## Models
 
-The currently vendored models are:
+LibreImage uses these fixed local model directories:
 
 ```text
 Kontext restore: models/FLUX.1-Kontext-dev
 Inpaint:         models/stable-diffusion-xl-1.0-inpainting-0.1
 ```
 
-Additional model ids or local model directories can still be entered in the UI.
-The backend caches loaded pipelines in process so repeated tuning runs avoid
-reloading model weights.
+If either directory is missing, the app downloads that model from Hugging Face
+into `models/` before loading it. The backend caches loaded pipelines in process
+so repeated tuning runs avoid reloading model weights.
 
 Note: The performance has been tuned for Apple Silicon. It may not be optimal on
 GPUs. Happy to merge PRs that improve GPU performance.
