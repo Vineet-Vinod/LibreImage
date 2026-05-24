@@ -17,6 +17,25 @@ missing model into `models/`.
 
 `models/` and `tmp/` are gitignored.
 
+## System Requirements
+
+LibreImage is tuned for Apple Silicon with PyTorch MPS. The bundled models are
+large: Flux Kontext is the limiting stage and loaded in float16 uses about 33 GB
+of MPS allocation in smoke tests on an M3 Ultra, with higher temporary driver
+memory during inference.
+
+Recommended:
+
+- Apple Silicon Mac with MPS support.
+- 64 GB unified memory minimum for practical Flux Kontext use.
+- 128 GB or more unified memory for comfortable tuning and keeping both
+  pipelines warm.
+- Enough disk space under `models/` for both downloaded model directories.
+
+CPU fallback is available through PyTorch but is expected to be very slow. CUDA
+may work through PyTorch on suitable hardware, but this project is not tuned or
+tested for CUDA.
+
 ## Run
 
 ```bash
@@ -68,6 +87,3 @@ Inpaint:         models/stable-diffusion-xl-1.0-inpainting-0.1
 If either directory is missing, the app downloads that model from Hugging Face
 into `models/` before loading it. The backend caches loaded pipelines in process
 so repeated tuning runs avoid reloading model weights.
-
-Note: The performance has been tuned for Apple Silicon. It may not be optimal on
-GPUs. Happy to merge PRs that improve GPU performance.
