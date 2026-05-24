@@ -31,8 +31,14 @@ function imageUrl(image) {
 }
 
 function setStatus(text, error = false) {
-  statusEl.textContent = text;
+  statusEl.textContent = normalizeStatus(text);
   statusEl.style.color = error ? "var(--danger)" : "var(--muted)";
+}
+
+function normalizeStatus(text) {
+  const trimmed = String(text || "").trim().replace(/[.。]+$/u, "");
+  if (!trimmed) return "";
+  return trimmed.charAt(0).toLocaleUpperCase() + trimmed.slice(1);
 }
 
 function selectedImage() {
