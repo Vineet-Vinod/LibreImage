@@ -80,4 +80,4 @@ reloading model weights.
 The app automatically selects MPS when available, enables PyTorch MPS fallback,
 keeps pipeline instances warm in memory, and avoids CPU offload on MPS. For best
 throughput, keep the server running while tuning so the loaded model cache stays
-hot. Have not implemented CUDA support (no hardware to test) => Open to PRs.
+hot.
