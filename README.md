@@ -78,8 +78,9 @@ reloading model weights.
 ## Apple Silicon Performance
 
 The app automatically selects MPS when available, enables PyTorch MPS fallback,
-loads pipelines in float16, keeps pipeline instances warm in memory, and avoids
-CPU offload on MPS. Attention and VAE slicing are left off on Apple Silicon by
-default because they were slightly slower on an M3 Ultra without reducing peak
-driver memory in a one-step Flux Kontext smoke test. For best throughput, keep
-the server running while tuning so the loaded model cache stays hot.
+loads both bundled pipelines in float16, keeps pipeline instances warm in
+memory, and avoids CPU offload on MPS. Attention and VAE slicing are left off on
+Apple Silicon by default because they were slower on an M3 Ultra without
+meaningfully reducing peak driver memory in smoke tests for both bundled
+models. For best throughput, keep the server running while tuning so the loaded
+model cache stays hot.

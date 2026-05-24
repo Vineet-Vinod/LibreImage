@@ -107,6 +107,8 @@ class KontextInpainter:
             "guidance_scale": self.options.guidance_scale,
             "strength": self.options.strength,
             "generator": generator,
+            "height": work_image.height,
+            "width": work_image.width,
         }
         _add_attention_scale(kwargs, pipe, self.options.lora_scale)
         result = pipe(**kwargs).images[0]
