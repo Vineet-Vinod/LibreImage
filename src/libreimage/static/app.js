@@ -43,6 +43,10 @@ function selectedImage() {
 
 function setStage(stage) {
   state.stage = stage;
+  if (stage === "final") {
+    const selectedIndex = state.images.findIndex((image) => image.id === state.selectedId);
+    if (selectedIndex >= 0) state.finalIndex = selectedIndex;
+  }
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === stage));
   document.querySelectorAll(".step").forEach((button) => button.classList.toggle("active", button.dataset.stage === stage));
   render();
@@ -112,11 +116,25 @@ function thumb(image) {
     <span class="thumb-title"><span>${image.stage}</span><span>${image.width}x${image.height}</span></span>
   `;
   button.addEventListener("click", () => {
-    state.selectedId = image.id;
-    if (state.stage === "inpaint") prepareMask(image);
-    render();
+    selectImage(image);
   });
   return button;
+}
+
+function selectImage(image) {
+  state.selectedId = image.id;
+  if (state.stage === "final") {
+    state.finalIndex = Math.max(0, state.images.findIndex((item) => item.id === image.id));
+  }
+  if (state.stage === "inpaint") prepareMask(image);
+  render();
+}
+
+function setFinalIndex(index) {
+  state.finalIndex = Math.max(0, Math.min(state.images.length - 1, index));
+  const image = state.images[state.finalIndex];
+  if (image) state.selectedId = image.id;
+  render();
 }
 
 function renderStageImages() {
@@ -341,8 +359,8 @@ function bindEvents() {
   $("runInpaint").addEventListener("click", runInpaint);
   $("runSharpen").addEventListener("click", runSharpen);
   document.querySelectorAll("[data-delete-current]").forEach((button) => button.addEventListener("click", deleteSelected));
-  $("prevImage").addEventListener("click", () => { state.finalIndex = Math.max(0, state.finalIndex - 1); renderFinal(); });
-  $("nextImage").addEventListener("click", () => { state.finalIndex = Math.min(state.images.length - 1, state.finalIndex + 1); renderFinal(); });
+  $("prevImage").addEventListener("click", () => setFinalIndex(state.finalIndex - 1));
+  $("nextImage").addEventListener("click", () => setFinalIndex(state.finalIndex + 1));
   $("saveCurrent").addEventListener("click", () => saveImages(selectedImage() ? [selectedImage()] : []));
   $("saveAll").addEventListener("click", () => saveImages(state.images));
   $("restartFromFinal").addEventListener("click", () => setStage("restore"));
@@ -359,8 +377,8 @@ function bindEvents() {
   window.addEventListener("resize", drawMask);
   window.addEventListener("keydown", (event) => {
     if (state.stage !== "final") return;
-    if (event.key === "ArrowLeft") { state.finalIndex = Math.max(0, state.finalIndex - 1); renderFinal(); }
-    if (event.key === "ArrowRight") { state.finalIndex = Math.min(state.images.length - 1, state.finalIndex + 1); renderFinal(); }
+    if (event.key === "ArrowLeft") setFinalIndex(state.finalIndex - 1);
+    if (event.key === "ArrowRight") setFinalIndex(state.finalIndex + 1);
   });
 }
 
