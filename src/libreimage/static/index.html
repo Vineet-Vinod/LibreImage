@@ -35,18 +35,18 @@
     <section id="restore" class="view restore-view">
       <aside class="panel">
         <h2>Kontext Restore</h2>
-        <label>Prompt<textarea id="restorePrompt"></textarea></label>
-        <label>Negative Prompt<textarea id="restoreNegative"></textarea></label>
-        <label>Model<input id="restoreModel" type="text"></label>
+        <label><span class="label-row">Prompt<span class="help-icon" tabindex="0" role="img" aria-label="Prompt help" data-tip="Text instruction for the restore. More specific wording pushes the edit more strongly.">?</span></span><textarea id="restorePrompt"></textarea></label>
+        <label><span class="label-row">Negative Prompt<span class="help-icon" tabindex="0" role="img" aria-label="Negative prompt help" data-tip="What to avoid. Adding terms suppresses those artifacts, but too many can overconstrain the result.">?</span></span><textarea id="restoreNegative"></textarea></label>
+        <label><span class="label-row">Model<span class="help-icon" tabindex="0" role="img" aria-label="Model help" data-tip="Generator checkpoint path. Changing it switches the model behavior and output style.">?</span></span><input id="restoreModel" type="text"></label>
         <div class="field-pair">
-          <label>Steps<input id="restoreSteps" type="number" min="1" max="80" value="24"></label>
-          <label>Seed<input id="restoreSeed" type="text" placeholder="random"></label>
+          <label><span class="label-row">Steps<span class="help-icon" tabindex="0" role="img" aria-label="Steps help" data-tip="Denoising iterations. Increasing can improve detail, but takes longer and may overwork the image.">?</span></span><input id="restoreSteps" type="number" min="1" max="80" value="24"></label>
+          <label><span class="label-row">Seed<span class="help-icon" tabindex="0" role="img" aria-label="Seed help" data-tip="Random starting point. Increasing or changing it gives a different variation, not a stronger effect.">?</span></span><input id="restoreSeed" type="text" placeholder="random"></label>
         </div>
         <div class="field-pair">
-          <label>Guidance<input id="restoreGuidance" type="number" min="0" max="20" step="0.1" value="2.5"></label>
-          <label>Strength<input id="restoreStrength" type="number" min="0" max="1" step="0.05" value="0.35"></label>
+          <label><span class="label-row">Guidance<span class="help-icon" tabindex="0" role="img" aria-label="Guidance help" data-tip="Prompt influence. Increasing follows the prompt more tightly, with higher risk of artificial changes.">?</span></span><input id="restoreGuidance" type="number" min="0" max="20" step="0.1" value="2.5"></label>
+          <label><span class="label-row">Strength<span class="help-icon" tabindex="0" role="img" aria-label="Strength help" data-tip="How much the source can change. Increasing repairs harder but may alter identity or composition.">?</span></span><input id="restoreStrength" type="number" min="0" max="1" step="0.05" value="0.35"></label>
         </div>
-        <label>LoRA Scale<input id="restoreLora" type="number" min="0" max="2" step="0.05" value="1"></label>
+        <label><span class="label-row">LoRA Scale<span class="help-icon" tabindex="0" role="img" aria-label="LoRA scale help" data-tip="Strength of the loaded LoRA adapter. Increasing makes its learned style or behavior more dominant.">?</span></span><input id="restoreLora" type="number" min="0" max="2" step="0.05" value="1"></label>
         <button id="runRestore" class="primary" type="button">Run Kontext</button>
       </aside>
       <section class="preview">
@@ -61,18 +61,18 @@
     <section id="inpaint" class="view editor-view">
       <aside class="panel">
         <h2>Inpaint</h2>
-        <label>Prompt<textarea id="inpaintPrompt"></textarea></label>
-        <label>Negative Prompt<textarea id="inpaintNegative"></textarea></label>
-        <label>Model<input id="inpaintModel" type="text"></label>
+        <label><span class="label-row">Prompt<span class="help-icon" tabindex="0" role="img" aria-label="Prompt help" data-tip="Instruction for the painted area. More specific wording steers the fill more strongly.">?</span></span><textarea id="inpaintPrompt"></textarea></label>
+        <label><span class="label-row">Negative Prompt<span class="help-icon" tabindex="0" role="img" aria-label="Negative prompt help" data-tip="What to avoid in the fill. Adding terms suppresses them, but too many can make results rigid.">?</span></span><textarea id="inpaintNegative"></textarea></label>
+        <label><span class="label-row">Model<span class="help-icon" tabindex="0" role="img" aria-label="Model help" data-tip="Inpaint checkpoint path. Changing it switches the model behavior and fill style.">?</span></span><input id="inpaintModel" type="text"></label>
         <div class="field-pair">
-          <label>Steps<input id="inpaintSteps" type="number" min="1" max="80" value="28"></label>
-          <label>Seed<input id="inpaintSeed" type="text" placeholder="random"></label>
+          <label><span class="label-row">Steps<span class="help-icon" tabindex="0" role="img" aria-label="Steps help" data-tip="Denoising iterations. Increasing can refine the fill, but takes longer and may add artifacts.">?</span></span><input id="inpaintSteps" type="number" min="1" max="80" value="28"></label>
+          <label><span class="label-row">Seed<span class="help-icon" tabindex="0" role="img" aria-label="Seed help" data-tip="Random starting point. Increasing or changing it gives a different fill variation.">?</span></span><input id="inpaintSeed" type="text" placeholder="random"></label>
         </div>
         <div class="field-pair">
-          <label>Guidance<input id="inpaintGuidance" type="number" min="0" max="20" step="0.1" value="3.5"></label>
-          <label>Strength<input id="inpaintStrength" type="number" min="0" max="1" step="0.05" value="0.9"></label>
+          <label><span class="label-row">Guidance<span class="help-icon" tabindex="0" role="img" aria-label="Guidance help" data-tip="Prompt influence. Increasing follows the prompt more closely, sometimes less naturally.">?</span></span><input id="inpaintGuidance" type="number" min="0" max="20" step="0.1" value="3.5"></label>
+          <label><span class="label-row">Strength<span class="help-icon" tabindex="0" role="img" aria-label="Strength help" data-tip="How much the masked area is regenerated. Increasing replaces more aggressively.">?</span></span><input id="inpaintStrength" type="number" min="0" max="1" step="0.05" value="0.9"></label>
         </div>
-        <label>LoRA Scale<input id="inpaintLora" type="number" min="0" max="2" step="0.05" value="1"></label>
+        <label><span class="label-row">LoRA Scale<span class="help-icon" tabindex="0" role="img" aria-label="LoRA scale help" data-tip="Strength of the loaded LoRA adapter. Increasing makes its learned style or behavior more dominant.">?</span></span><input id="inpaintLora" type="number" min="0" max="2" step="0.05" value="1"></label>
         <button id="runInpaint" class="primary" type="button">Run Inpaint</button>
       </aside>
       <section class="compare">
@@ -81,7 +81,7 @@
             <button id="brushBtn" class="active" type="button">Brush</button>
             <button id="eraseBtn" type="button">Eraser</button>
             <button id="clearMask" type="button">Clear</button>
-            <label class="range">Size<input id="brushSize" type="range" min="4" max="180" value="48"></label>
+            <label class="range"><span class="label-row">Size<span class="help-icon" tabindex="0" role="img" aria-label="Brush size help" data-tip="Brush diameter for mask painting. Increasing covers a larger area per stroke.">?</span></span><input id="brushSize" type="range" min="4" max="180" value="48"></label>
           </div>
           <canvas id="maskCanvas"></canvas>
         </div>
@@ -93,11 +93,11 @@
     <section id="sharpen" class="view editor-view">
       <aside class="panel">
         <h2>Sharpen</h2>
-        <label>Radius<input id="sharpRadius" type="number" min="0.1" max="5" step="0.1" value="1.4"></label>
-        <label>Amount<input id="sharpAmount" type="number" min="0" max="4" step="0.05" value="1.15"></label>
-        <label>Threshold<input id="sharpThreshold" type="number" min="0" max="32" value="3"></label>
-        <label>Contrast<input id="sharpContrast" type="number" min="0.5" max="1.8" step="0.01" value="1.02"></label>
-        <label>Color<input id="sharpColor" type="number" min="0" max="1.8" step="0.01" value="1"></label>
+        <label><span class="label-row">Radius<span class="help-icon" tabindex="0" role="img" aria-label="Radius help" data-tip="Edge width affected by sharpening. Increasing sharpens broader edges and can create halos.">?</span></span><input id="sharpRadius" type="number" min="0.1" max="5" step="0.1" value="1.4"></label>
+        <label><span class="label-row">Amount<span class="help-icon" tabindex="0" role="img" aria-label="Amount help" data-tip="Sharpening intensity. Increasing makes details crisper, but can amplify noise.">?</span></span><input id="sharpAmount" type="number" min="0" max="4" step="0.05" value="1.15"></label>
+        <label><span class="label-row">Threshold<span class="help-icon" tabindex="0" role="img" aria-label="Threshold help" data-tip="Minimum contrast before sharpening applies. Increasing protects smooth areas but may skip fine detail.">?</span></span><input id="sharpThreshold" type="number" min="0" max="32" value="3"></label>
+        <label><span class="label-row">Contrast<span class="help-icon" tabindex="0" role="img" aria-label="Contrast help" data-tip="Global contrast adjustment. Increasing deepens shadows and brightens highlights.">?</span></span><input id="sharpContrast" type="number" min="0.5" max="1.8" step="0.01" value="1.02"></label>
+        <label><span class="label-row">Color<span class="help-icon" tabindex="0" role="img" aria-label="Color help" data-tip="Color saturation multiplier. Increasing makes colors stronger and can look oversaturated.">?</span></span><input id="sharpColor" type="number" min="0" max="1.8" step="0.01" value="1"></label>
         <button id="runSharpen" class="primary" type="button">Run Sharpen</button>
         <button class="danger" data-delete-current="sharpen" type="button">Delete Selected</button>
       </aside>

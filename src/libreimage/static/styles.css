@@ -227,6 +227,75 @@ label {
   margin-bottom: 12px;
 }
 
+.label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.help-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 1px solid #d99aaa;
+  border-radius: 50%;
+  color: var(--accent-dark);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+}
+
+.help-icon::after {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 10;
+  width: min(230px, calc(100vw - 32px));
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 30px var(--shadow);
+  color: var(--text);
+  content: attr(data-tip);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.help-icon:hover::after,
+.help-icon:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.field-pair label:nth-child(2) .help-icon::after {
+  left: auto;
+  right: 0;
+  transform: translate(0, -4px);
+}
+
+.field-pair label:nth-child(2) .help-icon:hover::after,
+.field-pair label:nth-child(2) .help-icon:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+.help-icon:focus-visible {
+  outline: 2px solid rgba(199, 36, 84, 0.28);
+  outline-offset: 2px;
+}
+
 .check { grid-template-columns: 18px 1fr; align-items: center; }
 
 input, textarea {
