@@ -78,8 +78,7 @@ class KontextRestorer:
         }
         if "strength" in signature(pipe.__call__).parameters:
             kwargs["strength"] = self.options.strength
-        if self.options.lora_scale != 1.0:
-            kwargs["cross_attention_kwargs"] = {"scale": self.options.lora_scale}
+        _add_attention_scale(kwargs, pipe, self.options.lora_scale)
         result = pipe(**kwargs).images[0]
         if result.size != image.size:
             result = result.resize(image.size, Image.Resampling.LANCZOS)
@@ -107,8 +106,7 @@ class KontextInpainter:
             "strength": self.options.strength,
             "generator": generator,
         }
-        if self.options.lora_scale != 1.0:
-            kwargs["cross_attention_kwargs"] = {"scale": self.options.lora_scale}
+        _add_attention_scale(kwargs, pipe, self.options.lora_scale)
         result = pipe(**kwargs).images[0]
         if result.size != original_size:
             result = result.resize(original_size, Image.Resampling.LANCZOS)
@@ -195,6 +193,16 @@ def _generator(seed: int | None, device: str):
     import torch
 
     return torch.Generator(device=device).manual_seed(seed)
+
+
+def _add_attention_scale(kwargs: dict[str, object], pipe, scale: float) -> None:
+    if scale == 1.0:
+        return
+    parameters = signature(pipe.__call__).parameters
+    if "joint_attention_kwargs" in parameters:
+        kwargs["joint_attention_kwargs"] = {"scale": scale}
+    elif "cross_attention_kwargs" in parameters:
+        kwargs["cross_attention_kwargs"] = {"scale": scale}
 
 
 def _resolve_device(requested: str, torch_module) -> str:
