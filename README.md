@@ -19,11 +19,16 @@ missing model into `models/`.
 
 ## System Requirements
 
-LibreImage is tuned for Apple Silicon with PyTorch MPS. The bundled models are
-large: Flux Kontext is the limiting stage and loaded in float16 uses about 33 GB
-of MPS allocation in smoke tests on an M3 Ultra. Attention and VAE slicing are
-enabled by default; this is slower than the unsliced path in small benchmarks but
-produced better text-removal results during restoration testing.
+LibreImage is tuned for Apple Silicon with PyTorch MPS. Flux Kontext is the
+limiting stage: loaded in float16, it uses about 33 GB of MPS allocation in
+smoke tests on an M3 Ultra. Attention and VAE slicing are enabled by default;
+this is slower than the unsliced path in small benchmarks but produced better
+text-removal results during restoration testing.
+
+The Real-ESRGAN 2x sharpen model is tiny by comparison. Its checkpoint is about
+64 MB with about 16.7M parameters, so it is effectively noise next to the Flux
+and SDXL model footprint. Its runtime memory mostly depends on sharpen tile
+size, overlap, and batch size, not on a large model load.
 
 Recommended:
 
@@ -31,8 +36,9 @@ Recommended:
 - 64 GB unified memory minimum for practical Flux Kontext use.
 - 128 GB or more unified memory for comfortable tuning and keeping both
   pipelines warm.
-- 100 GB or more free disk space. The bundled local model directories are about
-  51 GB combined, before temporary outputs and cache growth.
+- 100 GB or more free disk space. The Flux and SDXL local model directories are
+  about 51 GB combined, before temporary outputs and cache growth. Real-ESRGAN
+  adds only about 64 MB.
 
 CPU fallback is available through PyTorch but is expected to be very slow. CUDA
 may work through PyTorch on suitable hardware, but this project is not tuned or
@@ -89,10 +95,16 @@ Sharpen:         models/Real-ESRGAN/RealESRGAN_x2.pth
 ```
 
 If a model is missing, the app downloads it from Hugging Face into `models/`
-before loading it. The sharpen stage always uses the ai-forever Real-ESRGAN 2x
-checkpoint and verifies its SHA-256 before loading it with PyTorch's restricted
-`weights_only=True` checkpoint loader. The backend caches loaded pipelines in
-process so repeated tuning runs avoid reloading model weights.
+before loading it. Flux and SDXL use Hugging Face snapshot downloads under the
+repo-local cache in `models/.hf/`; the Real-ESRGAN sharpen checkpoint is
+downloaded directly to `models/Real-ESRGAN/RealESRGAN_x2.pth` and does not use
+the Hugging Face cache.
+
+The sharpen stage always uses the ai-forever Real-ESRGAN 2x checkpoint and
+verifies its SHA-256 before loading it with PyTorch's restricted
+`weights_only=True` checkpoint loader. No NeMo/Nemo loader is used. The backend
+caches loaded pipelines in process so repeated tuning runs avoid reloading model
+weights.
 
 Real-ESRGAN sharpen tuning:
 
