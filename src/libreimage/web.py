@@ -16,8 +16,8 @@ from libreimage.pipelines import (
     KontextInpaintOptions,
     KontextOptions,
     KontextRestorer,
-    LocalSharpener,
     SharpenOptions,
+    RealESRGANSharpener,
 )
 from libreimage.session_store import SessionStore
 
@@ -126,22 +126,18 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
     async def sharpen(
         session_id: str,
         image_id: str = Form(...),
-        radius: float = Form(SharpenOptions.radius),
-        amount: float = Form(SharpenOptions.amount),
-        threshold: int = Form(SharpenOptions.threshold),
-        contrast: float = Form(SharpenOptions.contrast),
-        color: float = Form(SharpenOptions.color),
+        tile_size: int = Form(SharpenOptions.tile_size),
+        tile_pad: int = Form(SharpenOptions.tile_pad),
+        batch_size: int = Form(SharpenOptions.batch_size),
     ) -> JSONResponse:
         source = _load_store_image(store, session_id, image_id)
         options = SharpenOptions(
-            radius=max(0.1, min(float(radius), 5.0)),
-            amount=max(0.0, min(float(amount), 4.0)),
-            threshold=max(0, min(int(threshold), 32)),
-            contrast=max(0.5, min(float(contrast), 1.8)),
-            color=max(0.0, min(float(color), 1.8)),
+            tile_size=max(128, min(int(tile_size), 640)),
+            tile_pad=max(8, min(int(tile_pad), 64)),
+            batch_size=max(1, min(int(batch_size), 16)),
         )
-        result = LocalSharpener(options).run(source)
-        item = store.add_image(session_id, result, "sharpen", "Sharpen pass", image_id, asdict(options))
+        result = RealESRGANSharpener(options).run(source)
+        item = store.add_image(session_id, result, "sharpen", "Real-ESRGAN 2x", image_id, asdict(options))
         return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
 
     return app

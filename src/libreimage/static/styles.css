@@ -282,6 +282,13 @@ h2 {
   box-shadow: 18px 0 48px rgba(139, 23, 57, 0.06);
 }
 
+.panel-note {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 label {
   display: grid;
   gap: 6px;

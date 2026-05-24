@@ -67,8 +67,9 @@ Then open `http://<server-ip>:7860` from the other device.
 3. Move to Inpaint. Select any saved image from the bottom filmstrip, paint a
    mask with the brush or eraser, tune the inpaint params, and save more
    intermediates.
-4. Move to Sharpen. Select any intermediate, tune the local sharpening controls,
-   and save sharpened variants.
+4. Move to Sharpen. Select any intermediate and run the Real-ESRGAN 2x model to
+   upscale and sharpen it. The default tile settings are tuned on
+   `tmp/test.png` for Apple Silicon MPS: tile `320`, overlap `24`, batch `8`.
 5. Use Final to review every image in a slideshow. Arrow keys navigate between
    images. Save the current image or all images to a browser-selected folder.
    You can restart at the Kontext stage from the currently selected final image
@@ -84,8 +85,19 @@ LibreImage uses these fixed local model directories:
 ```text
 Kontext restore: models/FLUX.1-Kontext-dev
 Inpaint:         models/stable-diffusion-xl-1.0-inpainting-0.1
+Sharpen:         models/Real-ESRGAN/RealESRGAN_x2.pth
 ```
 
-If either directory is missing, the app downloads that model from Hugging Face
-into `models/` before loading it. The backend caches loaded pipelines in process
-so repeated tuning runs avoid reloading model weights.
+If a model is missing, the app downloads it from Hugging Face into `models/`
+before loading it. The sharpen stage always uses the ai-forever Real-ESRGAN 2x
+checkpoint and verifies its SHA-256 before loading it with PyTorch's restricted
+`weights_only=True` checkpoint loader. The backend caches loaded pipelines in
+process so repeated tuning runs avoid reloading model weights.
+
+Real-ESRGAN sharpen tuning:
+
+```text
+Tile:    larger values reduce tile count and are faster until memory pressure rises.
+Overlap: larger values reduce seams but increase work per tile.
+Batch:   larger values process more tiles together when memory allows.
+```

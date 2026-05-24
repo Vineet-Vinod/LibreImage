@@ -91,12 +91,11 @@
     <section id="sharpen" class="view editor-view">
       <aside class="panel">
         <h2>Sharpen</h2>
-        <label><span class="label-row">Radius<span class="help-icon" tabindex="0" role="img" aria-label="Radius help" data-tip="Edge width affected by sharpening. Increasing sharpens broader edges and can create halos.">?</span></span><input id="sharpRadius" type="number" min="0.1" max="5" step="0.1" value="1.4"></label>
-        <label><span class="label-row">Amount<span class="help-icon" tabindex="0" role="img" aria-label="Amount help" data-tip="Sharpening intensity. Increasing makes details crisper, but can amplify noise.">?</span></span><input id="sharpAmount" type="number" min="0" max="4" step="0.05" value="1.15"></label>
-        <label><span class="label-row">Threshold<span class="help-icon" tabindex="0" role="img" aria-label="Threshold help" data-tip="Minimum contrast before sharpening applies. Increasing protects smooth areas but may skip fine detail.">?</span></span><input id="sharpThreshold" type="number" min="0" max="32" value="3"></label>
-        <label><span class="label-row">Contrast<span class="help-icon" tabindex="0" role="img" aria-label="Contrast help" data-tip="Global contrast adjustment. Increasing deepens shadows and brightens highlights.">?</span></span><input id="sharpContrast" type="number" min="0.5" max="1.8" step="0.01" value="1.02"></label>
-        <label><span class="label-row">Color<span class="help-icon" tabindex="0" role="img" aria-label="Color help" data-tip="Color saturation multiplier. Increasing makes colors stronger and can look oversaturated.">?</span></span><input id="sharpColor" type="number" min="0" max="1.8" step="0.01" value="1"></label>
-        <button id="runSharpen" class="primary" type="button">Run Sharpen</button>
+        <p class="panel-note">Real-ESRGAN 2x upscales and sharpens the selected image.</p>
+        <label><span class="label-row">Tile<span class="help-icon" tabindex="0" role="img" aria-label="Tile help" data-tip="Inference tile size. Larger tiles are faster on Apple Silicon until memory pressure rises.">?</span></span><input id="sharpTileSize" type="number" min="128" max="640" step="64" value="320"></label>
+        <label><span class="label-row">Overlap<span class="help-icon" tabindex="0" role="img" aria-label="Overlap help" data-tip="Pixels of tile overlap before 2x scaling. Increasing reduces seams but costs more time.">?</span></span><input id="sharpTilePad" type="number" min="8" max="64" step="4" value="24"></label>
+        <label><span class="label-row">Batch<span class="help-icon" tabindex="0" role="img" aria-label="Batch help" data-tip="Tiles processed together. Increasing improves throughput when memory allows.">?</span></span><input id="sharpBatchSize" type="number" min="1" max="16" step="1" value="8"></label>
+        <button id="runSharpen" class="primary" type="button">Run Real-ESRGAN 2x</button>
         <button class="danger" data-delete-current="sharpen" type="button">Delete Selected</button>
       </aside>
       <section class="compare">

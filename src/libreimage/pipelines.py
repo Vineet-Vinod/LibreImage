@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from inspect import signature
 
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image
 
 from libreimage.images import clamp_to_multiple_of_eight
 from libreimage.model_store import (
@@ -12,7 +12,9 @@ from libreimage.model_store import (
     configure_model_environment,
     ensure_inpaint_model,
     ensure_kontext_model,
+    ensure_realesrgan_x2_model,
 )
+from libreimage.realesrgan import RealESRGAN2x, RealESRGANConfig
 
 
 DEFAULT_RESTORE_PROMPT = "Restore the image naturally. Repair damage, remove artifacts, preserve identity, texture, lighting, and composition."
@@ -45,11 +47,10 @@ class KontextInpaintOptions:
 
 @dataclass(frozen=True)
 class SharpenOptions:
-    radius: float = 1.4
-    amount: float = 1.15
-    threshold: int = 3
-    contrast: float = 1.02
-    color: float = 1.0
+    tile_size: int = 320
+    tile_pad: int = 24
+    batch_size: int = 8
+    device: str = "auto"
 
 
 class KontextRestorer:
@@ -109,23 +110,19 @@ class KontextInpainter:
         return Image.composite(result, image.convert("RGB"), mask.convert("L"))
 
 
-class LocalSharpener:
+class RealESRGANSharpener:
     def __init__(self, options: SharpenOptions) -> None:
         self.options = options
 
     def run(self, image: Image.Image) -> Image.Image:
-        result = image.convert("RGB").filter(
-            ImageFilter.UnsharpMask(
-                radius=self.options.radius,
-                percent=max(0, int(self.options.amount * 100)),
-                threshold=max(0, int(self.options.threshold)),
-            )
+        configure_model_environment()
+        model = _load_realesrgan_x2(self.options.device)
+        config = RealESRGANConfig(
+            tile_size=self.options.tile_size,
+            tile_pad=self.options.tile_pad,
+            batch_size=self.options.batch_size,
         )
-        if self.options.contrast != 1.0:
-            result = ImageEnhance.Contrast(result).enhance(self.options.contrast)
-        if self.options.color != 1.0:
-            result = ImageEnhance.Color(result).enhance(self.options.color)
-        return result
+        return model.run(image, config)
 
 
 @lru_cache(maxsize=1)
@@ -160,6 +157,16 @@ def _load_inpaint_pipeline(device: str):
         cache_dir=str(HF_HUB_CACHE),
     )
     return _optimize_pipeline(pipe, resolved_device)
+
+
+@lru_cache(maxsize=1)
+def _load_realesrgan_x2(device: str) -> RealESRGAN2x:
+    model_path = ensure_realesrgan_x2_model()
+    import torch
+
+    resolved_device = _resolve_device(device, torch)
+    dtype = _dtype_for_device(resolved_device, torch)
+    return RealESRGAN2x(model_path, resolved_device, dtype)
 
 
 def _optimize_pipeline(pipe, device: str):

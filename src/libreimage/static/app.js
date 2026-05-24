@@ -202,11 +202,9 @@ async function runSharpen() {
   if (!image) return setStatus("Select an image first", true);
   const form = new FormData();
   form.append("image_id", image.id);
-  form.append("radius", $("sharpRadius").value);
-  form.append("amount", $("sharpAmount").value);
-  form.append("threshold", $("sharpThreshold").value);
-  form.append("contrast", $("sharpContrast").value);
-  form.append("color", $("sharpColor").value);
+  form.append("tile_size", $("sharpTileSize").value);
+  form.append("tile_pad", $("sharpTilePad").value);
+  form.append("batch_size", $("sharpBatchSize").value);
   await runGeneration("sharpen", `/api/session/${state.sessionId}/sharpen`, form);
 }
 
