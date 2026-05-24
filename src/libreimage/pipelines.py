@@ -75,6 +75,8 @@ class KontextRestorer:
             "num_inference_steps": self.options.steps,
             "guidance_scale": self.options.guidance_scale,
             "generator": generator,
+            "height": work_image.height,
+            "width": work_image.width,
         }
         if "strength" in signature(pipe.__call__).parameters:
             kwargs["strength"] = self.options.strength
