@@ -27,6 +27,7 @@ class KontextOptions:
     steps: int = 24
     guidance_scale: float = 2.5
     strength: float = 0.35
+    lora_scale: float = 1.0
     seed: int | None = None
     device: str = "auto"
 
@@ -72,6 +73,7 @@ class KontextRestorer:
         }
         if "strength" in signature(pipe.__call__).parameters:
             kwargs["strength"] = self.options.strength
+        _add_attention_scale(kwargs, pipe, self.options.lora_scale)
         result = pipe(**kwargs).images[0]
         if result.size != image.size:
             result = result.resize(image.size, Image.Resampling.LANCZOS)
@@ -187,6 +189,16 @@ def _generator(seed: int | None, device: str):
     import torch
 
     return torch.Generator(device=device).manual_seed(seed)
+
+
+def _add_attention_scale(kwargs: dict[str, object], pipe, scale: float) -> None:
+    if scale == 1.0:
+        return
+    parameters = signature(pipe.__call__).parameters
+    if "joint_attention_kwargs" in parameters:
+        kwargs["joint_attention_kwargs"] = {"scale": scale}
+    elif "cross_attention_kwargs" in parameters:
+        kwargs["cross_attention_kwargs"] = {"scale": scale}
 
 
 def _resolve_device(requested: str, torch_module) -> str:

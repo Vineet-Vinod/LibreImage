@@ -77,6 +77,7 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
         steps: int = Form(KontextOptions.steps),
         guidance_scale: float = Form(KontextOptions.guidance_scale),
         strength: float = Form(KontextOptions.strength),
+        lora_scale: float = Form(KontextOptions.lora_scale),
         seed: str = Form(""),
     ) -> JSONResponse:
         source = _load_store_image(store, session_id, image_id)
@@ -86,6 +87,7 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
             steps=max(1, min(int(steps), 80)),
             guidance_scale=float(guidance_scale),
             strength=max(0.0, min(float(strength), 1.0)),
+            lora_scale=max(0.0, min(float(lora_scale), 2.0)),
             seed=_parse_seed(seed),
         )
         result = KontextRestorer(options).run(source)

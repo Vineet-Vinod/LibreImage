@@ -41,8 +41,8 @@ Then open `http://<server-ip>:7860` from the other device.
 
 1. Upload an image.
 2. Run the Kontext restoration stage. Tune prompt, negative prompt, steps,
-   guidance, strength, and seed. Every successful run is saved as a temporary
-   session image.
+   guidance, strength, LoRA scale, and seed. Every successful run is saved as a
+   temporary session image.
 3. Move to Inpaint. Select any saved image from the bottom filmstrip, paint a
    mask with the brush or eraser, tune the inpaint params, and save more
    intermediates.
