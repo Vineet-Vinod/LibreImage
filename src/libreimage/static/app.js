@@ -36,7 +36,7 @@ function setStatus(text, error = false) {
 }
 
 function normalizeStatus(text) {
-  const trimmed = String(text || "").trim().replace(/[.。]+$/u, "");
+  const trimmed = String(text || "").trim().replace(/[.!?。！？…]+$/u, "");
   if (!trimmed) return "";
   return trimmed.charAt(0).toLocaleUpperCase() + trimmed.slice(1);
 }
@@ -59,7 +59,7 @@ function setStage(stage) {
 async function api(path, options = {}) {
   const response = await fetch(path, options);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.detail || "Request failed.");
+  if (!response.ok) throw new Error(payload.detail || "Request failed");
   return payload;
 }
 
@@ -68,7 +68,7 @@ async function startSession() {
   state.sessionId = payload.session_id;
   state.images = payload.images;
   state.selectedId = state.images.at(-1)?.id || null;
-  setStatus("Session ready.");
+  setStatus("Session ready");
   render();
 }
 
@@ -76,11 +76,11 @@ async function uploadFile(file) {
   if (!file) return;
   const form = new FormData();
   form.append("image", file, file.name);
-  setStatus("Uploading image...");
+  setStatus("Uploading image");
   const payload = await api(`/api/session/${state.sessionId}/upload`, { method: "POST", body: form });
   state.images = payload.images;
   state.selectedId = payload.image.id;
-  setStatus("Image added.");
+  setStatus("Image added");
   setStage("restore");
 }
 
@@ -181,7 +181,7 @@ function renderFinal() {
 
 async function runRestore() {
   const image = selectedImage();
-  if (!image) return setStatus("Upload an image first.", true);
+  if (!image) return setStatus("Upload an image first", true);
   const form = new FormData();
   appendCommon(form, "restore", image.id);
   await runGeneration("restore", `/api/session/${state.sessionId}/restore`, form);
@@ -189,7 +189,7 @@ async function runRestore() {
 
 async function runInpaint() {
   const image = selectedImage();
-  if (!image) return setStatus("Select an image first.", true);
+  if (!image) return setStatus("Select an image first", true);
   const maskBlob = await new Promise((resolve) => state.mask.overlay.toBlob(resolve, "image/png"));
   const form = new FormData();
   appendCommon(form, "inpaint", image.id);
@@ -199,7 +199,7 @@ async function runInpaint() {
 
 async function runSharpen() {
   const image = selectedImage();
-  if (!image) return setStatus("Select an image first.", true);
+  if (!image) return setStatus("Select an image first", true);
   const form = new FormData();
   form.append("image_id", image.id);
   form.append("radius", $("sharpRadius").value);
@@ -224,13 +224,13 @@ function appendCommon(form, prefix, imageId) {
 async function runGeneration(stage, url, form) {
   const button = stage === "restore" ? $("runRestore") : stage === "inpaint" ? $("runInpaint") : $("runSharpen");
   button.disabled = true;
-  setStatus(`Running ${stage}. Model loading can take a while on the first pass.`);
+  setStatus(`Running ${stage}. Model loading can take a while on the first pass`);
   try {
     const payload = await api(url, { method: "POST", body: form });
     state.images = payload.images;
     state.selectedId = payload.image.id;
     state.finalIndex = state.images.findIndex((image) => image.id === payload.image.id);
-    setStatus(`${stage} result saved to the session library.`);
+    setStatus(`${stage} result saved to the session library`);
     render();
   } catch (error) {
     setStatus(error.message, true);
@@ -246,7 +246,7 @@ async function deleteSelected() {
   state.images = state.images.filter((item) => item.id !== image.id);
   state.selectedId = state.images.at(-1)?.id || null;
   state.finalIndex = Math.min(state.finalIndex, Math.max(0, state.images.length - 1));
-  setStatus("Image deleted from the session library.");
+  setStatus("Image deleted from the session library");
   render();
 }
 
@@ -331,7 +331,7 @@ async function saveImages(images) {
       await writable.write(blob);
       await writable.close();
     }
-    setStatus("Saved selected image files.");
+    setStatus("Saved selected image files");
     return;
   }
   images.forEach((image) => {
@@ -340,7 +340,7 @@ async function saveImages(images) {
     anchor.download = `${image.stage}-${image.id}.png`;
     anchor.click();
   });
-  setStatus("Browser folder picker unavailable; downloaded images instead.");
+  setStatus("Browser folder picker unavailable; downloaded images instead");
 }
 
 function bindEvents() {
