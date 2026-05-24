@@ -1,8 +1,9 @@
 # LibreImage
 
-LibreImage is a local-network web app for image restoration. The workflow is session based: uploads and generated intermediates are kept
-under `tmp/libreimage/`, while only final images you explicitly save are written
-to a folder you choose in the browser.
+LibreImage is a local-network web app for image restoration. The workflow is session 
+based: uploads and generated intermediates are kept under `tmp/libreimage/`,
+while only final images you explicitly save are written to a folder you choose
+in the browser.
 
 ## Setup
 
@@ -57,30 +58,16 @@ views.
 
 ## Models
 
-Defaults:
+The currently vendored models are:
 
 ```text
 Kontext restore: models/FLUX.1-Kontext-dev
 Inpaint:         models/stable-diffusion-xl-1.0-inpainting-0.1
 ```
 
-The currently vendored models are:
-
-```text
-models/FLUX.1-Kontext-dev
-models/stable-diffusion-xl-1.0-inpainting-0.1
-```
-
 Additional model ids or local model directories can still be entered in the UI.
 The backend caches loaded pipelines in process so repeated tuning runs avoid
 reloading model weights.
 
-## Apple Silicon Performance
-
-The app automatically selects MPS when available, enables PyTorch MPS fallback,
-loads both bundled pipelines in float16, keeps pipeline instances warm in
-memory, and avoids CPU offload on MPS. Attention and VAE slicing are left off on
-Apple Silicon by default because they were slower on an M3 Ultra without
-meaningfully reducing peak driver memory in smoke tests for both bundled
-models. For best throughput, keep the server running while tuning so the loaded
-model cache stays hot.
+Note: The performance has been tuned for Apple Silicon. It may not be optimal on
+GPUs. Happy to merge PRs that improve GPU performance.
