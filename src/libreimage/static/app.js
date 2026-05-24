@@ -195,7 +195,7 @@ function appendCommon(form, prefix, imageId) {
   form.append("steps", $(`${prefix}Steps`).value);
   form.append("guidance_scale", $(`${prefix}Guidance`).value);
   form.append("strength", $(`${prefix}Strength`).value);
-  form.append("lora_scale", $(`${prefix}Lora`).value);
+  if ($(`${prefix}Lora`)) form.append("lora_scale", $(`${prefix}Lora`).value);
   form.append("seed", $(`${prefix}Seed`).value);
 }
 

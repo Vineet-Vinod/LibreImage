@@ -109,7 +109,6 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
         steps: int = Form(KontextInpaintOptions.steps),
         guidance_scale: float = Form(KontextInpaintOptions.guidance_scale),
         strength: float = Form(KontextInpaintOptions.strength),
-        lora_scale: float = Form(KontextInpaintOptions.lora_scale),
         seed: str = Form(""),
     ) -> JSONResponse:
         source = _load_store_image(store, session_id, image_id)
@@ -123,7 +122,6 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
             steps=max(1, min(int(steps), 80)),
             guidance_scale=float(guidance_scale),
             strength=max(0.0, min(float(strength), 1.0)),
-            lora_scale=max(0.0, min(float(lora_scale), 2.0)),
             seed=_parse_seed(seed),
         )
         result = KontextInpainter(options).run(source, mask_image)

@@ -45,7 +45,6 @@ class KontextInpaintOptions:
     steps: int = 28
     guidance_scale: float = 3.5
     strength: float = 0.9
-    lora_scale: float = 1.0
     seed: int | None = None
     device: str = "auto"
 
@@ -110,7 +109,6 @@ class KontextInpainter:
             "height": work_image.height,
             "width": work_image.width,
         }
-        _add_attention_scale(kwargs, pipe, self.options.lora_scale)
         result = pipe(**kwargs).images[0]
         if result.size != original_size:
             result = result.resize(original_size, Image.Resampling.LANCZOS)
