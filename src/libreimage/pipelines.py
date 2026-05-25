@@ -136,6 +136,7 @@ def _load_kontext_pipeline(device: str):
         str(model_path),
         torch_dtype=dtype,
         use_safetensors=True,
+        local_files_only=True,
     )
     return _optimize_pipeline(pipe, resolved_device)
 
@@ -152,6 +153,7 @@ def _load_sdxl_inpaint_pipeline(device: str):
         str(model_path),
         torch_dtype=dtype,
         use_safetensors=True,
+        local_files_only=True,
     )
     return _optimize_pipeline(pipe, resolved_device)
 

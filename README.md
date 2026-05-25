@@ -94,10 +94,13 @@ Inpaint:         models/stable-diffusion-xl-1.0-inpainting-0.1
 Sharpen:         models/Real-ESRGAN/RealESRGAN_x2.pth
 ```
 
-If a model is missing, the app downloads it from Hugging Face into the matching
-path under `models/` before loading it. The sharpen stage always uses the
-ai-forever Real-ESRGAN 2x checkpoint and verifies its SHA-256 before loading it
-with PyTorch's restricted `weights_only=True` checkpoint loader.
+If a model is missing, the app downloads the model files directly into the
+matching path under `models/`. LibreImage does not use a Hugging Face model
+cache. Pipelines are loaded from those local directories only.
+
+The sharpen stage always uses the ai-forever Real-ESRGAN 2x checkpoint and
+verifies its SHA-256 before loading it with PyTorch's restricted
+`weights_only=True` checkpoint loader.
 
 Loaded pipelines are cached in process so repeated tuning runs avoid reloading
 model weights.
