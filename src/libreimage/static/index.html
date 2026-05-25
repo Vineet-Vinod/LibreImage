@@ -95,8 +95,10 @@
         <label><span class="label-row">Tile<span class="help-icon" tabindex="0" role="img" aria-label="Tile help" data-tip="Inference tile size. Larger tiles are faster on Apple Silicon until memory pressure rises.">?</span></span><input id="sharpTileSize" type="number" min="128" max="640" step="64" value="320"></label>
         <label><span class="label-row">Overlap<span class="help-icon" tabindex="0" role="img" aria-label="Overlap help" data-tip="Pixels of tile overlap before 2x scaling. Increasing reduces seams but costs more time.">?</span></span><input id="sharpTilePad" type="number" min="8" max="64" step="4" value="24"></label>
         <label><span class="label-row">Batch<span class="help-icon" tabindex="0" role="img" aria-label="Batch help" data-tip="Tiles processed together. Increasing improves throughput when memory allows.">?</span></span><input id="sharpBatchSize" type="number" min="1" max="16" step="1" value="8"></label>
-        <button id="runSharpen" class="primary" type="button">Run Real-ESRGAN 2x</button>
-        <button class="danger" data-delete-current="sharpen" type="button">Delete Selected</button>
+        <div class="panel-actions">
+          <button id="runSharpen" class="primary" type="button">Run Real-ESRGAN 2x</button>
+          <button class="danger" data-delete-current="sharpen" type="button">Delete Selected</button>
+        </div>
       </aside>
       <section class="compare">
         <div class="image-shell"><img id="sharpenSource" alt=""></div>

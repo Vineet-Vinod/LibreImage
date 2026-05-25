@@ -289,6 +289,14 @@ h2 {
   line-height: 1.45;
 }
 
+.panel-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+}
+
 label {
   display: grid;
   gap: 6px;
