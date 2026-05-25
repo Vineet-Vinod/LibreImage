@@ -113,3 +113,9 @@ Tile:    larger values reduce tile count and are faster until memory pressure ri
 Overlap: larger values reduce seams but increase work per tile.
 Batch:   larger values process more tiles together when memory allows.
 ```
+
+## License
+
+LibreImage is licensed under the MIT License. See `LICENSE` for project code and
+`THIRD_PARTY_LICENSES.md` for downloaded model artifacts, direct dependencies,
+and vendored third-party code notices.
