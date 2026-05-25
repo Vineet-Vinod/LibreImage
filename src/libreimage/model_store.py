@@ -35,7 +35,7 @@ def ensure_kontext_model() -> Path:
     return _ensure_model(VENDORED_KONTEXT_MODEL, KONTEXT_REPO_ID)
 
 
-def ensure_inpaint_model() -> Path:
+def ensure_sdxl_inpaint_model() -> Path:
     return _ensure_model(VENDORED_SDXL_INPAINT_MODEL, SDXL_INPAINT_REPO_ID)
 
 

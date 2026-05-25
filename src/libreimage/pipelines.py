@@ -10,7 +10,7 @@ from libreimage.images import clamp_to_multiple_of_eight
 from libreimage.model_store import (
     HF_HUB_CACHE,
     configure_model_environment,
-    ensure_inpaint_model,
+    ensure_sdxl_inpaint_model,
     ensure_kontext_model,
     ensure_realesrgan_x2_model,
 )
@@ -35,7 +35,7 @@ class KontextOptions:
 
 
 @dataclass(frozen=True)
-class KontextInpaintOptions:
+class SDXLInpaintOptions:
     prompt: str = DEFAULT_INPAINT_PROMPT
     negative_prompt: str = DEFAULT_NEGATIVE_PROMPT
     steps: int = 28
@@ -81,13 +81,13 @@ class KontextRestorer:
         return result
 
 
-class KontextInpainter:
-    def __init__(self, options: KontextInpaintOptions) -> None:
+class SDXLInpainter:
+    def __init__(self, options: SDXLInpaintOptions) -> None:
         self.options = options
 
     def run(self, image: Image.Image, mask: Image.Image) -> Image.Image:
         configure_model_environment()
-        pipe = _load_inpaint_pipeline(self.options.device)
+        pipe = _load_sdxl_inpaint_pipeline(self.options.device)
         original_size = image.size
         work_image = clamp_to_multiple_of_eight(image.convert("RGB"))
         work_mask = clamp_to_multiple_of_eight(mask.convert("L"))
@@ -143,8 +143,8 @@ def _load_kontext_pipeline(device: str):
 
 
 @lru_cache(maxsize=1)
-def _load_inpaint_pipeline(device: str):
-    model_path = ensure_inpaint_model()
+def _load_sdxl_inpaint_pipeline(device: str):
+    model_path = ensure_sdxl_inpaint_model()
     import torch
     from diffusers import AutoPipelineForInpainting
 

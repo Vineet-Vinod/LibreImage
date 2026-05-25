@@ -12,8 +12,8 @@ from PIL import Image, ImageOps
 
 from libreimage.model_store import configure_model_environment
 from libreimage.pipelines import (
-    KontextInpainter,
-    KontextInpaintOptions,
+    SDXLInpainter,
+    SDXLInpaintOptions,
     KontextOptions,
     KontextRestorer,
     SharpenOptions,
@@ -99,27 +99,27 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
         session_id: str,
         mask: UploadFile = File(...),
         image_id: str = Form(...),
-        prompt: str = Form(KontextInpaintOptions.prompt),
-        negative_prompt: str = Form(KontextInpaintOptions.negative_prompt),
-        steps: int = Form(KontextInpaintOptions.steps),
-        guidance_scale: float = Form(KontextInpaintOptions.guidance_scale),
-        strength: float = Form(KontextInpaintOptions.strength),
+        prompt: str = Form(SDXLInpaintOptions.prompt),
+        negative_prompt: str = Form(SDXLInpaintOptions.negative_prompt),
+        steps: int = Form(SDXLInpaintOptions.steps),
+        guidance_scale: float = Form(SDXLInpaintOptions.guidance_scale),
+        strength: float = Form(SDXLInpaintOptions.strength),
         seed: str = Form(""),
     ) -> JSONResponse:
         source = _load_store_image(store, session_id, image_id)
         mask_image = await _read_mask(mask, source.size)
         if mask_image.getbbox() is None:
             raise HTTPException(status_code=400, detail="Mask is empty. Paint an area before running inpaint.")
-        options = KontextInpaintOptions(
-            prompt=prompt.strip() or KontextInpaintOptions.prompt,
-            negative_prompt=negative_prompt.strip() or KontextInpaintOptions.negative_prompt,
+        options = SDXLInpaintOptions(
+            prompt=prompt.strip() or SDXLInpaintOptions.prompt,
+            negative_prompt=negative_prompt.strip() or SDXLInpaintOptions.negative_prompt,
             steps=max(1, min(int(steps), 80)),
             guidance_scale=float(guidance_scale),
             strength=max(0.0, min(float(strength), 1.0)),
             seed=_parse_seed(seed),
         )
-        result = KontextInpainter(options).run(source, mask_image)
-        item = store.add_image(session_id, result, "inpaint", "Inpaint repair", image_id, asdict(options))
+        result = SDXLInpainter(options).run(source, mask_image)
+        item = store.add_image(session_id, result, "inpaint", "SDXL inpaint", image_id, asdict(options))
         return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
 
     @app.post("/api/session/{session_id}/sharpen")
