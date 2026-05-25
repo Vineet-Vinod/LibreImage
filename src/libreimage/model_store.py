@@ -7,8 +7,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MODELS_DIR = REPO_ROOT / "models"
-HF_HOME = MODELS_DIR / ".hf"
-HF_HUB_CACHE = HF_HOME / "hub"
 VENDORED_KONTEXT_MODEL = MODELS_DIR / "FLUX.1-Kontext-dev"
 VENDORED_SDXL_INPAINT_MODEL = MODELS_DIR / "stable-diffusion-xl-1.0-inpainting-0.1"
 VENDORED_REALESRGAN_X2_MODEL = MODELS_DIR / "Real-ESRGAN" / "RealESRGAN_x2.pth"
@@ -23,11 +21,6 @@ REALESRGAN_X2_URL = f"https://huggingface.co/{REALESRGAN_REPO_ID}/resolve/main/{
 def configure_model_environment() -> None:
     """Keep all downloaded model artifacts inside the repo-local models directory."""
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    os.environ.setdefault("HF_HOME", str(HF_HOME))
-    os.environ.setdefault("HF_HUB_CACHE", str(HF_HUB_CACHE))
-    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(HF_HUB_CACHE))
-    os.environ.setdefault("DIFFUSERS_CACHE", str(HF_HUB_CACHE))
-    os.environ.setdefault("TRANSFORMERS_CACHE", str(HF_HUB_CACHE))
     os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 
 
@@ -64,7 +57,6 @@ def _ensure_model(local_path: Path, repo_id: str) -> Path:
     snapshot_download(
         repo_id=repo_id,
         local_dir=str(local_path),
-        cache_dir=str(HF_HUB_CACHE),
     )
     return local_path
 

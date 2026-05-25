@@ -8,7 +8,6 @@ from PIL import Image
 
 from libreimage.images import clamp_to_multiple_of_eight
 from libreimage.model_store import (
-    HF_HUB_CACHE,
     configure_model_environment,
     ensure_sdxl_inpaint_model,
     ensure_kontext_model,
@@ -137,7 +136,6 @@ def _load_kontext_pipeline(device: str):
         str(model_path),
         torch_dtype=dtype,
         use_safetensors=True,
-        cache_dir=str(HF_HUB_CACHE),
     )
     return _optimize_pipeline(pipe, resolved_device)
 
@@ -154,7 +152,6 @@ def _load_sdxl_inpaint_pipeline(device: str):
         str(model_path),
         torch_dtype=dtype,
         use_safetensors=True,
-        cache_dir=str(HF_HUB_CACHE),
     )
     return _optimize_pipeline(pipe, resolved_device)
 

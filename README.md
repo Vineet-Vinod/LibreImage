@@ -94,17 +94,13 @@ Inpaint:         models/stable-diffusion-xl-1.0-inpainting-0.1
 Sharpen:         models/Real-ESRGAN/RealESRGAN_x2.pth
 ```
 
-If a model is missing, the app downloads it from Hugging Face into `models/`
-before loading it. Flux and SDXL use Hugging Face snapshot downloads under the
-repo-local cache in `models/.hf/`; the Real-ESRGAN sharpen checkpoint is
-downloaded directly to `models/Real-ESRGAN/RealESRGAN_x2.pth` and does not use
-the Hugging Face cache.
+If a model is missing, the app downloads it from Hugging Face into the matching
+path under `models/` before loading it. The sharpen stage always uses the
+ai-forever Real-ESRGAN 2x checkpoint and verifies its SHA-256 before loading it
+with PyTorch's restricted `weights_only=True` checkpoint loader.
 
-The sharpen stage always uses the ai-forever Real-ESRGAN 2x checkpoint and
-verifies its SHA-256 before loading it with PyTorch's restricted
-`weights_only=True` checkpoint loader. No NeMo/Nemo loader is used. The backend
-caches loaded pipelines in process so repeated tuning runs avoid reloading model
-weights.
+Loaded pipelines are cached in process so repeated tuning runs avoid reloading
+model weights.
 
 Real-ESRGAN sharpen tuning:
 
