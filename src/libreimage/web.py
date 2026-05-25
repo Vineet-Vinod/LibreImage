@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import io
 from dataclasses import asdict
 from pathlib import Path
+from threading import Lock
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
@@ -30,6 +32,7 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
     configure_model_environment()
     app = FastAPI(title="LibreImage")
     store = SessionStore(output_dir)
+    generation_lock = Lock()
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -90,7 +93,7 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
             lora_scale=max(0.0, min(float(lora_scale), 2.0)),
             seed=_parse_seed(seed),
         )
-        result = KontextRestorer(options).run(source)
+        result = await _run_generation(lambda: KontextRestorer(options).run(source), generation_lock)
         item = store.add_image(session_id, result, "restore", "Kontext restore", image_id, asdict(options))
         return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
 
@@ -118,7 +121,7 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
             strength=max(0.0, min(float(strength), 1.0)),
             seed=_parse_seed(seed),
         )
-        result = SDXLInpainter(options).run(source, mask_image)
+        result = await _run_generation(lambda: SDXLInpainter(options).run(source, mask_image), generation_lock)
         item = store.add_image(session_id, result, "inpaint", "SDXL inpaint", image_id, asdict(options))
         return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
 
@@ -136,11 +139,19 @@ def create_app(output_dir: Path = DEFAULT_TMP_DIR) -> FastAPI:
             tile_pad=max(8, min(int(tile_pad), 64)),
             batch_size=max(1, min(int(batch_size), 16)),
         )
-        result = RealESRGANSharpener(options).run(source)
+        result = await _run_generation(lambda: RealESRGANSharpener(options).run(source), generation_lock)
         item = store.add_image(session_id, result, "sharpen", "Real-ESRGAN 2x", image_id, asdict(options))
         return JSONResponse({"image": _image_payload(item, session_id), "images": _images_payload(store, session_id)})
 
     return app
+
+
+async def _run_generation(operation, generation_lock: Lock):
+    def locked_operation():
+        with generation_lock:
+            return operation()
+
+    return await asyncio.to_thread(locked_operation)
 
 
 def _images_payload(store: SessionStore, session_id: str) -> list[dict[str, object]]:
