@@ -7,7 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from PIL import Image, ImageOps
+from PIL import Image
+
+from libreimage.images import SRGB_ICC_PROFILE, convert_to_srgb
 
 
 @dataclass(frozen=True)
@@ -55,7 +57,7 @@ class SessionStore:
     def add_upload(self, session_id: str, source: Image.Image, name: str) -> LibraryImage:
         return self.add_image(
             session_id=session_id,
-            image=ImageOps.exif_transpose(source).convert("RGB"),
+            image=source,
             stage="upload",
             name=name,
             parent_id=None,
@@ -75,15 +77,16 @@ class SessionStore:
         filename = f"{image_id}.png"
         path = self._library_dir(session_id) / filename
         path.parent.mkdir(parents=True, exist_ok=True)
-        image.convert("RGB").save(path, format="PNG")
+        stored_image = convert_to_srgb(image)
+        stored_image.save(path, format="PNG", icc_profile=SRGB_ICC_PROFILE)
         item = LibraryImage(
             id=image_id,
             stage=stage,
             name=name,
             filename=filename,
             created_at=datetime.now(timezone.utc).isoformat(),
-            width=image.width,
-            height=image.height,
+            width=stored_image.width,
+            height=stored_image.height,
             parent_id=parent_id,
             params=params,
         )

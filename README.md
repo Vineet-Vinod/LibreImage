@@ -20,8 +20,7 @@ missing model into `models/`.
 ## System Requirements
 
 LibreImage is tuned for Apple Silicon with PyTorch MPS. Flux Kontext is the
-limiting stage: loaded in float16, it uses about 33 GB of MPS allocation in
-smoke tests on an M3 Ultra. Attention and VAE slicing are enabled by default;
+limiting stage. Attention and VAE slicing are enabled by default;
 this is slower than the unsliced path in small benchmarks but produced better
 text-removal results during restoration testing.
 

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from inspect import signature
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from libreimage.images import clamp_to_multiple_of_eight
 from libreimage.model_store import (
@@ -19,6 +19,8 @@ from libreimage.realesrgan import RealESRGAN2x, RealESRGANConfig
 DEFAULT_RESTORE_PROMPT = "Restore the image naturally. Repair damage, remove artifacts, preserve identity, texture, lighting, and composition."
 DEFAULT_NEGATIVE_PROMPT = "text, watermark, logo, plastic skin, oversharpening, distorted geometry, extra objects"
 DEFAULT_INPAINT_PROMPT = "Natural invisible repair matching the surrounding image."
+KONTEXT_MAX_AREA = 1024**2
+KONTEXT_RESOLUTION_MULTIPLE = 16
 
 
 @dataclass(frozen=True)
@@ -59,7 +61,8 @@ class KontextRestorer:
     def run(self, image: Image.Image) -> Image.Image:
         configure_model_environment()
         pipe = _load_kontext_pipeline(self.options.device)
-        work_image = clamp_to_multiple_of_eight(image.convert("RGB"))
+        work_size = _kontext_work_size(image.size)
+        work_image = ImageOps.fit(image.convert("RGB"), work_size, Image.Resampling.LANCZOS)
         generator = _generator(self.options.seed, pipe.device.type)
         kwargs = {
             "image": work_image,
@@ -70,13 +73,15 @@ class KontextRestorer:
             "generator": generator,
             "height": work_image.height,
             "width": work_image.width,
+            "max_area": work_image.width * work_image.height,
+            "_auto_resize": False,
         }
         if "strength" in signature(pipe.__call__).parameters:
             kwargs["strength"] = self.options.strength
         _add_attention_scale(kwargs, pipe, self.options.lora_scale)
         result = pipe(**kwargs).images[0]
         if result.size != image.size:
-            result = result.resize(image.size, Image.Resampling.LANCZOS)
+            result = ImageOps.fit(result, image.size, Image.Resampling.LANCZOS)
         return result
 
 
@@ -207,6 +212,22 @@ def _add_attention_scale(kwargs: dict[str, object], pipe, scale: float) -> None:
         kwargs["cross_attention_kwargs"] = {"scale": scale}
 
 
+def _kontext_work_size(size: tuple[int, int]) -> tuple[int, int]:
+    width, height = size
+    aspect_ratio = width / height
+    work_width = round((KONTEXT_MAX_AREA * aspect_ratio) ** 0.5)
+    work_height = round((KONTEXT_MAX_AREA / aspect_ratio) ** 0.5)
+    work_width = max(
+        KONTEXT_RESOLUTION_MULTIPLE,
+        work_width // KONTEXT_RESOLUTION_MULTIPLE * KONTEXT_RESOLUTION_MULTIPLE,
+    )
+    work_height = max(
+        KONTEXT_RESOLUTION_MULTIPLE,
+        work_height // KONTEXT_RESOLUTION_MULTIPLE * KONTEXT_RESOLUTION_MULTIPLE,
+    )
+    return work_width, work_height
+
+
 def _resolve_device(requested: str, torch_module) -> str:
     if requested != "auto":
         return requested
@@ -219,5 +240,5 @@ def _resolve_device(requested: str, torch_module) -> str:
 
 def _dtype_for_device(device: str, torch_module):
     if device in {"cuda", "mps"}:
-        return torch_module.float16
+        return torch_module.float32
     return torch_module.float32

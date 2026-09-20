@@ -10,8 +10,9 @@ from threading import Lock
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from PIL import Image, ImageOps
+from PIL import Image
 
+from libreimage.images import load_rgb
 from libreimage.model_store import configure_model_environment
 from libreimage.pipelines import (
     SDXLInpainter,
@@ -179,12 +180,14 @@ def _require_image_path(store: SessionStore, session_id: str, image_id: str) -> 
 
 
 def _load_store_image(store: SessionStore, session_id: str, image_id: str) -> Image.Image:
-    return Image.open(_require_image_path(store, session_id, image_id)).convert("RGB")
+    return load_rgb(_require_image_path(store, session_id, image_id))
 
 
 async def _read_upload_image(upload: UploadFile) -> Image.Image:
     try:
-        return ImageOps.exif_transpose(Image.open(io.BytesIO(await upload.read()))).convert("RGB")
+        image = Image.open(io.BytesIO(await upload.read()))
+        image.load()
+        return image
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Invalid image: {exc}") from exc
 
